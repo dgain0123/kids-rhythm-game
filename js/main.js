@@ -126,10 +126,10 @@ function onState(state, info) {
       els.status.textContent = `準備好了！打${info.maxHits}下鼓～`;
       break;
     case "progress":
-      els.status.textContent = "很好！繼續～";
+      els.status.textContent = "";
       break;
     case "hitOnce":
-      els.status.textContent = "很好！不要再打囉…";
+      els.status.textContent = "";
       break;
     case "pass":
       celebrateSound();   // 聲音先播，讓音訊管線先建立
