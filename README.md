@@ -33,9 +33,21 @@ charts/level1.json   第一關的「譜」
 start.command        一鍵啟動
 ```
 
-## 譜的格式
-譜的來源是 **Logic Pro**。流程規劃：
-`Logic → 匯出 MIDI(.mid) → mid→json 轉檔器（待建） → charts/*.json → 遊戲讀取`
+## 譜的格式 & 轉檔
+譜的來源是 **Logic Pro**。流程：
+`Logic → 匯出 MIDI(.mid) → tools/mid2json.py → charts/*.json → 遊戲讀取`
+
+**在 Logic 匯出**：File → Export → Selection/Tracks as MIDI File（鼓軌用 GM 鼓對照，小鼓=38、大鼓=36…）。
+
+**轉檔**（需要 `pretty_midi`，缺的話 `pip3 install pretty_midi`）：
+```bash
+# 全鼓件、前 4 小節
+python3 tools/mid2json.py 你的鼓.mid --bars 4 --title "第二關"
+# 只留小鼓當簡單關
+python3 tools/mid2json.py 你的鼓.mid --only snare --bars 4 -o charts/level2.json
+```
+選項：`--only kick,snare,hihat,tom,cymbal`、`--bars N`、`--max-hits N`、`--title`、`--hint`。
+轉檔行為由 `tests/test_mid2json.py` 釘住，`tests/guard_test.py` 為守門入口（改 .py 會自動跑）。
 
 目前 `charts/level1.json` 為手寫範例：
 ```json
