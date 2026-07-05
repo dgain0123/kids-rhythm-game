@@ -1,0 +1,35 @@
+{
+  "title": "第7關：打7下",
+  "maxHits": 7,
+  "hint": "看到7個音符，打7下鼓！",
+  "notes": [
+    {
+      "type": "quarter",
+      "drum": "snare"
+    },
+    {
+      "type": "quarter",
+      "drum": "snare"
+    },
+    {
+      "type": "quarter",
+      "drum": "snare"
+    },
+    {
+      "type": "quarter",
+      "drum": "snare"
+    },
+    {
+      "type": "quarter",
+      "drum": "snare"
+    },
+    {
+      "type": "quarter",
+      "drum": "snare"
+    },
+    {
+      "type": "quarter",
+      "drum": "snare"
+    }
+  ]
+}

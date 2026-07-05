@@ -1,0 +1,31 @@
+{
+  "title": "第6關：打6下",
+  "maxHits": 6,
+  "hint": "看到6個音符，打6下鼓！",
+  "notes": [
+    {
+      "type": "quarter",
+      "drum": "snare"
+    },
+    {
+      "type": "quarter",
+      "drum": "snare"
+    },
+    {
+      "type": "quarter",
+      "drum": "snare"
+    },
+    {
+      "type": "quarter",
+      "drum": "snare"
+    },
+    {
+      "type": "quarter",
+      "drum": "snare"
+    },
+    {
+      "type": "quarter",
+      "drum": "snare"
+    }
+  ]
+}
