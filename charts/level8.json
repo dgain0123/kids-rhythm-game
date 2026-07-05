@@ -1,38 +1,38 @@
 {
   "title": "第8關：打8下",
   "maxHits": 8,
-  "hint": "看到8個音符，打8下鼓！",
+  "hint": "看到音符，打8下鼓！",
   "notes": [
     {
-      "type": "quarter",
+      "type": "eighth",
       "drum": "snare"
     },
     {
-      "type": "quarter",
+      "type": "eighth",
       "drum": "snare"
     },
     {
-      "type": "quarter",
+      "type": "eighth",
       "drum": "snare"
     },
     {
-      "type": "quarter",
+      "type": "eighth",
       "drum": "snare"
     },
     {
-      "type": "quarter",
+      "type": "eighth",
       "drum": "snare"
     },
     {
-      "type": "quarter",
+      "type": "eighth",
       "drum": "snare"
     },
     {
-      "type": "quarter",
+      "type": "eighth",
       "drum": "snare"
     },
     {
-      "type": "quarter",
+      "type": "eighth",
       "drum": "snare"
     }
   ]
