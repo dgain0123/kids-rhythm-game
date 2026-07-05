@@ -167,4 +167,6 @@ els.retry.addEventListener("click", retry);
   drawNote(els.noteCanvas, chart.notes[0]);
   await initCharacters({ face: els.face, picker: $("charPicker") });
   updateThreshMark(sensToThreshold(parseFloat(els.sens.value)));
+  // 需要除錯麥克風時，用 index.html?debug=1 打開診斷面板
+  if (new URLSearchParams(location.search).get("debug")) els.debug.hidden = false;
 })();
