@@ -151,6 +151,21 @@ button:active { transform: translateY(4px); box-shadow: 0 2px 0 #d63e6e; }
 button:disabled { opacity: .6; cursor: default; }
 #retryBtn { background: var(--blue); box-shadow: 0 6px 0 #3a72d6; }
 
+/* 診斷面板 */
+#debug {
+  margin-top: 14px;
+  max-width: 90vw;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #3a4668;
+  background: #ffffffcc;
+  border: 1px dashed #b9c3e0;
+  border-radius: 12px;
+  padding: 8px 14px;
+  white-space: pre-wrap;
+  text-align: left;
+}
+
 /* 全螢幕彩帶 */
 #fxCanvas {
   position: fixed;

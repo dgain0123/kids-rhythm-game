@@ -1,7 +1,7 @@
 {
-  "title": "第一關：打一下",
+  "title": "第1關：打1下",
   "maxHits": 1,
-  "hint": "看到音符，打一下鼓！只能打一下喔～",
+  "hint": "看到音符，打1下鼓！只能打1下喔～",
   "notes": [
     { "type": "quarter", "drum": "snare" }
   ]

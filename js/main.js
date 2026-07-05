@@ -17,7 +17,10 @@ const els = {
   meterFill: $("meterFill"),
   threshMark: $("threshMark"),
   sens: $("sensitivity"),
+  debug: $("debug"),
 };
+
+let _peakMax = 0; // 記錄出現過的最大峰值，判斷麥克風到底有沒有收到聲音
 
 // 靈敏度滑桿(0=不靈敏, 1=很靈敏) → 觸發門檻(0.02=很好觸發, 0.5=很難觸發)
 // 往「很靈敏」拉 → 門檻變低 → 更容易被打鼓觸發
@@ -33,7 +36,8 @@ let game = null;
 let chart = null;
 
 async function loadChart() {
-  const res = await fetch("./charts/level1.json");
+  // 加時間戳避開瀏覽器快取，改譜後重整就能立刻看到
+  const res = await fetch("./charts/level1.json?t=" + Date.now(), { cache: "no-store" });
   return res.json();
 }
 
@@ -44,7 +48,7 @@ function onState(state, info) {
   switch (state) {
     case "ready":
       setFace("🥁");
-      els.status.textContent = "準備好了！打一下鼓～";
+      els.status.textContent = "準備好了！打1下鼓～";
       break;
     case "hitOnce":
       setFace("👀");
@@ -60,7 +64,7 @@ function onState(state, info) {
       break;
     case "fail":
       setFace("😢");
-      els.status.textContent = "哎呀～打太多下了！再試一次";
+      els.status.textContent = "哎呀～打太多下了！再試1次";
       stopListening();
       els.retry.hidden = false;
       break;
@@ -89,20 +93,41 @@ function stopListening() {
   if (listener) { listener.stop(); listener = null; }
 }
 
+// 讀出目前用的麥克風裝置名稱與狀態，方便判斷是不是選錯輸入
+function micInfo(l) {
+  try {
+    const t = l.stream && l.stream.getAudioTracks()[0];
+    if (!t) return "(沒有音軌)";
+    return `${t.label || "未命名"} | enabled=${t.enabled} muted=${t.muted} state=${t.readyState}`;
+  } catch (e) { return "(讀不到)"; }
+}
+
 async function startGame() {
   els.start.disabled = true;
   els.start.textContent = "開麥克風中…";
   try {
     listener = new DrumListener({
       onHit: () => { flashHit(); if (game) game.registerHit(); },
-      onLevel: (lv) => { els.meterFill.style.width = Math.round(lv * 100) + "%"; }
+      onLevel: (lv) => {
+        els.meterFill.style.width = Math.round(lv * 100) + "%";
+        if (lv > _peakMax) _peakMax = lv;
+        // 即時把數值秀在診斷面板
+        els.debug.textContent =
+          `目前音量: ${lv.toFixed(3)}   出現過最大: ${_peakMax.toFixed(3)}\n` +
+          `音訊狀態: ${listener.audioCtx ? listener.audioCtx.state : "?"}   ` +
+          `取樣率: ${listener.audioCtx ? listener.audioCtx.sampleRate : "?"}\n` +
+          `麥克風: ${micInfo(listener)}`;
+      }
     });
     const th = sensToThreshold(parseFloat(els.sens.value));
     listener.setThreshold(th);
     updateThreshMark(th);
+    _peakMax = 0;
     await listener.start();
+    els.debug.textContent = "已取得麥克風，開始偵測…\n" + micInfo(listener);
   } catch (e) {
-    els.status.textContent = "拿不到麥克風權限 😵 請允許麥克風、並用 localhost 開啟";
+    els.status.textContent = "拿不到麥克風 😵";
+    els.debug.textContent = "❌ 錯誤：" + (e && e.name) + " - " + (e && e.message);
     els.start.disabled = false;
     els.start.textContent = "開始遊戲";
     return;
