@@ -29,6 +29,7 @@ const els = {
   levelMenu: $("levelMenu"),
   levelList: $("levelList"),
   menuBtn: $("menuBtn"),
+  reconnect: $("reconnectBtn"),
   charPicker: $("charPicker"),
   controls: document.querySelector(".controls"),
 };
@@ -310,6 +311,8 @@ async function startGame() {
   els.start.textContent = "開麥克風中…";
   try {
     const th = sensToThreshold(parseFloat(els.sens.value));
+    // 麥克風串流若已死掉(當機/被系統收回)，丟掉重開，避免後面幾關讀到全 0
+    if (listener && !listener.isLive()) { listener.stop(); listener = null; }
     if (!listener) {
       // 第一次：開麥克風。之後整場重用同一個，不再每輪開開關關
       listener = new DrumListener({
@@ -330,10 +333,10 @@ async function startGame() {
       await listener.start();
       els.debug.textContent = "已取得麥克風，開始偵測…\n" + micInfo(listener);
     } else {
-      // 之後幾輪：直接恢復偵測(麥克風一直開著)
+      // 之後幾輪：直接恢復偵測(麥克風一直開著；並喚醒可能被 suspend 的 AudioContext)
       listener.setThreshold(th);
       updateThreshMark(th);
-      listener.resume();
+      await listener.resume();
     }
   } catch (e) {
     els.status.textContent = "拿不到麥克風 😵";
@@ -386,6 +389,13 @@ els.start.addEventListener("click", startGame);
 els.retry.addEventListener("click", retry);
 els.next.addEventListener("click", nextLevel);
 els.menuBtn.addEventListener("click", showMenu);
+
+// 重連麥克風：完全重開麥克風並重新開始本關(麥克風卡住時的救命按鈕)
+els.reconnect.addEventListener("click", async () => {
+  if (listener) { listener.stop(); listener = null; }
+  els.status.textContent = "重新連接麥克風中…";
+  await startGame();
+});
 
 // 試聽歡呼：單獨播放這段歡呼(不玩遊戲、不放彩帶、不碰麥克風)，用來隔離「斷掉」是檔案還是遊戲負載
 els.testCheer.addEventListener("click", () => {

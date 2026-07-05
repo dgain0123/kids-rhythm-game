@@ -93,13 +93,21 @@ export class DrumListener {
   pause() { this.running = false; }
 
   // 從暫停恢復偵測(不用重開麥克風)
-  resume() {
+  async resume() {
     if (!this.running && this.audioCtx) {
+      // 關鍵：AudioContext 在過關畫面常被瀏覽器自動 suspend，一定要喚醒否則量表全 0
+      if (this.audioCtx.state === "suspended") await this.audioCtx.resume();
       this.running = true;
       this._armed = true;
       this._startTime = performance.now(); // 恢復也暖機一下
       requestAnimationFrame(this._loop);
     }
+  }
+
+  // 麥克風串流是否還活著(用來判斷要不要重開)
+  isLive() {
+    const t = this.stream && this.stream.getAudioTracks()[0];
+    return !!(t && t.readyState === "live");
   }
 
   // 完全關閉(釋放麥克風)。遊戲進行中不要用，避免裝置重設造成輸出閃斷
