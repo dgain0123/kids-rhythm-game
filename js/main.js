@@ -126,7 +126,7 @@ function onState(state, info) {
       els.status.textContent = `準備好了！打${info.maxHits}下鼓～`;
       break;
     case "progress":
-      els.status.textContent = `很好！再打 ${info.maxHits - info.hits} 下～`;
+      els.status.textContent = "很好！繼續～";
       break;
     case "hitOnce":
       els.status.textContent = "很好！不要再打囉…";
