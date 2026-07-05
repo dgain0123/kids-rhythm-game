@@ -76,7 +76,24 @@ html, body {
   line-height: 1;
   transition: transform .2s;
 }
+.char-item { position: relative; height: 100%; display: flex; align-items: center; justify-content: center; }
 .char-media { display: block; height: 100%; width: auto; max-width: clamp(90px, 15vw, 150px); object-fit: contain; }
+/* 號碼牌：每隻動物拿著寫自己是第幾隻 */
+.char-num {
+  position: absolute;
+  bottom: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 24px;
+  height: 24px;
+  padding: 0 5px;
+  background: #fff;
+  border: 3px solid var(--pink);
+  border-radius: 999px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px; font-weight: 900; color: var(--pink);
+  box-shadow: 0 2px 4px rgba(0,0,0,.18);
+}
 /* 淡陰影，讓白色角色(如兔子)在淺背景上也看得清楚 */
 img.char-media { filter: drop-shadow(0 3px 4px rgba(80, 80, 130, .28)); }
 .char-emoji {

@@ -22,7 +22,12 @@ export function setCharCount(n) { charCount = Math.max(1, n | 0); }
 function renderCurrent() {
   const ch = list.find(c => c.id === currentId) || list[0];
   if (!ch) { els.face.textContent = "🙂"; return; }
-  els.face.innerHTML = mediaHTML(ch, "char-media").repeat(charCount);
+  // 每隻角色包一層，加上號碼牌(第幾隻)
+  let html = "";
+  for (let i = 1; i <= charCount; i++) {
+    html += `<div class="char-item">${mediaHTML(ch, "char-media")}<span class="char-num">${i}</span></div>`;
+  }
+  els.face.innerHTML = html;
   // 選單高亮
   [...els.picker.querySelectorAll(".char-btn")].forEach(b =>
     b.classList.toggle("active", b.dataset.id === ch.id));
