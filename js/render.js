@@ -26,13 +26,13 @@ export function drawNote(canvas, note) {
   ctx.save();
   ctx.translate(cx, cy);
   ctx.rotate(-0.35);
-  ctx.fillStyle = "#ff5a8a";
+  ctx.fillStyle = "#111";
   ctx.beginPath();
   ctx.ellipse(0, 0, 13, 10, 0, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
   // 符桿
-  ctx.strokeStyle = "#ff5a8a";
+  ctx.strokeStyle = "#111";
   ctx.lineWidth = 4;
   ctx.beginPath();
   ctx.moveTo(cx + 12, cy - 2);
