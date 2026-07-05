@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>失敗音效試聽</title>
+<style>
+  body { font-family: "PingFang TC", system-ui, sans-serif; background: linear-gradient(160deg,#fff3fb,#e8f4ff); margin:0; padding:24px; }
+  h1 { color:#ff5a8a; text-align:center; }
+  p.tip { text-align:center; color:#6b7aa0; margin-top:-6px; }
+  .grid { max-width:640px; margin:20px auto; display:flex; flex-direction:column; gap:12px; }
+  button { all:unset; cursor:pointer; display:flex; align-items:center; gap:14px;
+    background:#fff; border:3px solid transparent; border-radius:18px; padding:14px 18px;
+    box-shadow:0 5px 14px rgba(120,120,200,.15); transition:transform .1s, border-color .15s; }
+  button:hover { transform:translateY(-2px); }
+  button:active { border-color:#ff5a8a; }
+  .num { font-size:26px; font-weight:900; color:#ff5a8a; width:40px; text-align:center; }
+  .name { font-size:18px; font-weight:800; color:#4a5680; }
+  .desc { font-size:13px; color:#6b7aa0; }
+  .play { margin-left:auto; font-size:22px; }
+</style>
+</head>
+<body>
+  <h1>失敗音效試聽 🔊</h1>
+  <p class="tip">點一下試聽，選好後跟 Claude 說「我要第 X 個」</p>
+  <div class="grid" id="grid"></div>
+<script>
+const items = [
+  ["01","溫柔下行","doo-doo-doo，三個音慢慢往下"],
+  ["02","卡通滑降","像溜滑梯 wheeoop 往下滑"],
+  ["03","傷心小號","wah-wah-waaah 三連下行"],
+  ["04","uh-oh","經典兩音『欸喔』"],
+  ["05","抖抖 boing","一個音抖抖的彈跳感"],
+  ["06","方波下行","bloop-bloop 電子四連音"],
+  ["07","洩氣氣球","長長滑到很低，像洩氣"],
+  ["08","低音 womp","womp-womp 搞笑低音"],
+  ["09","柔和 aww","兩音+氣音，最柔和"],
+  ["10","溫和錯誤","短短的『噗』一聲"],
+];
+const grid = document.getElementById("grid");
+let cur = null;
+for (const [n,name,desc] of items) {
+  const b = document.createElement("button");
+  b.innerHTML = `<span class="num">${n}</span><span><div class="name">${name}</div><div class="desc">${desc}</div></span><span class="play">▶️</span>`;
+  b.onclick = () => { if(cur){cur.pause();} cur = new Audio(`./fail${n}.wav`); cur.play(); };
+  grid.appendChild(b);
+}
+</script>
+</body>
+</html>
