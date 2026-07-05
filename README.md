@@ -58,6 +58,22 @@ python3 tools/mid2json.py 你的鼓.mid --only snare --bars 4 -o charts/level2.j
 }
 ```
 
+## 換角色（每個小朋友喜歡的不一樣）
+畫面上方有**角色選單**，點一下就換，選擇會記住。**一份網頁、多個角色**，不用複製整個網站。
+
+**加一個新角色（約 30 秒）：**
+1. 把圖片放進 `characters/` 資料夾（建議**透明背景 PNG、正方形**，例如 `characters/pikachu.png`）
+2. 打開 `characters/index.json`，在 `characters` 陣列加一筆：
+   ```json
+   { "id": "pikachu", "name": "皮卡丘", "img": "pikachu.png" }
+   ```
+   （想用 emoji 當角色就寫 `"emoji": "🐱"`、不用放圖）
+3. 重整網頁 → 選單就多一個
+
+- 過關時角色會自己蹦蹦跳（`css/style.css` 的 `@keyframes celebrate`）
+- 也能用網址指定預設角色：`index.html?char=pikachu`
+- 角色系統程式在 `js/characters.js`
+
 ## 之後可以加
 - mid→json 轉檔器（對接 Logic / 鼓譜自動化專案）
 - 更多關卡（打兩下、跟拍子、多種鼓件）

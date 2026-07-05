@@ -2,6 +2,7 @@
 import { DrumListener } from "./audio.js";
 import { Game } from "./game.js";
 import { drawNote, confetti } from "./render.js";
+import { initCharacters } from "./characters.js";
 
 const $ = (id) => document.getElementById(id);
 
@@ -41,21 +42,17 @@ async function loadChart() {
   return res.json();
 }
 
-function setFace(emoji) { els.face.textContent = emoji; }
-
 function onState(state, info) {
+  // stage 的 class 帶動角色的動畫(過關蹦跳、失敗搖頭等)，角色圖本身不變
   els.stage.className = "stage " + state;
   switch (state) {
     case "ready":
-      setFace("🥁");
       els.status.textContent = "準備好了！打1下鼓～";
       break;
     case "hitOnce":
-      setFace("👀");
       els.status.textContent = "很好！不要再打囉…";
       break;
     case "pass":
-      setFace("🎉");
       els.status.textContent = "過關！你好棒！";
       confetti(els.fxCanvas);
       celebrateSound();
@@ -63,7 +60,6 @@ function onState(state, info) {
       els.retry.hidden = false;
       break;
     case "fail":
-      setFace("😢");
       els.status.textContent = "哎呀～打太多下了！再試1次";
       stopListening();
       els.retry.hidden = false;
@@ -169,5 +165,6 @@ els.retry.addEventListener("click", retry);
   chart = await loadChart();
   $("title").textContent = chart.title;
   drawNote(els.noteCanvas, chart.notes[0]);
+  await initCharacters({ face: els.face, picker: $("charPicker") });
   updateThreshMark(sensToThreshold(parseFloat(els.sens.value)));
 })();
