@@ -16,8 +16,10 @@ export class DrumListener {
     this.refractoryMs = 400;    // 打一下後多久內不再偵測(蓋掉餘音/回音，避免一下算成多下)
     this.riseFactor = 3.0;      // 要比背景底噪大這麼多倍才算一下
     this.margin = 0.03;         // 額外緩衝，避免貼著底噪誤觸
+    this.warmupMs = 600;        // 開/恢復麥克風後的暖機期，忽略裝置初始化的爆音
     this._ambient = 0.02;       // 自動追蹤的背景底噪
     this._lastHitTime = 0;
+    this._startTime = 0;        // 這次開始/恢復偵測的時間
     this._armed = true;         // true=目前安靜、可以再次觸發
   }
 
@@ -38,6 +40,7 @@ export class DrumListener {
     this.data = new Float32Array(this.analyser.fftSize);
     this.stream = stream;
     this.running = true;
+    this._startTime = performance.now(); // 開始暖機
     if (this.audioCtx.state === "suspended") await this.audioCtx.resume();
     this._loop();
   }
@@ -64,6 +67,13 @@ export class DrumListener {
     // 相對安靜時，緩慢跟隨背景底噪(打擊當下不更新，避免把打擊算進底噪)
     if (peak < trigger * 0.8) this._ambient = this._ambient * 0.99 + peak * 0.01;
 
+    // 暖機期：麥克風剛開會有裝置初始化的爆音，這段時間不觸發(避免被算成一下)
+    if (now - this._startTime < this.warmupMs) {
+      this._armed = true;
+      requestAnimationFrame(this._loop);
+      return;
+    }
+
     // 打擊：明顯高過門檻、距上次夠久、且已武裝
     if (this._armed && peak > trigger && now - this._lastHitTime > this.refractoryMs) {
       this._armed = false;
@@ -87,6 +97,7 @@ export class DrumListener {
     if (!this.running && this.audioCtx) {
       this.running = true;
       this._armed = true;
+      this._startTime = performance.now(); // 恢復也暖機一下
       requestAnimationFrame(this._loop);
     }
   }
