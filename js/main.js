@@ -143,6 +143,7 @@ function onState(state, info) {
       setTimeout(() => confetti(els.fxCanvas), 120); // 彩帶延後，避開最重的第一幀壓到聲音
       break;
     case "fail":
+      failSound();
       els.status.textContent = "哎呀～打太多下了！再試1次";
       stopListening();
       els.retry.hidden = false;
@@ -177,8 +178,12 @@ function unlockAudio() {
 // 用 HTMLAudioElement 播放：獨立媒體管線，比 Web Audio buffer 更不怕主執行緒卡頓
 let cheerSrc = null;
 let cheerEl = null; // 真人歡呼的 <audio> 元素(這台 Safari 能出聲的管線)
+let failEl = null;  // 失敗音效的 <audio> 元素
 const CHEER_SRCS = ["./sounds/cheer.wav", "./sounds/cheer.mp3"]; // WAV 優先
 async function preloadCheer() {
+  // 失敗音效
+  try { failEl = new Audio("./sounds/fail.wav"); failEl.preload = "auto"; failEl.load(); } catch (e) {}
+  // 過關歡呼
   for (const src of CHEER_SRCS) {
     try {
       const r = await fetch(src, { method: "HEAD" });
@@ -197,17 +202,28 @@ async function preloadCheer() {
   }
 }
 
-// 在使用者點擊時「解鎖」<audio> 元素：靜音播一下馬上暫停歸零，之後過關就能從非點擊情境播放
-let _cheerPrimed = false;
-function primeCheer() {
-  if (!cheerEl || _cheerPrimed) return;
-  const el = cheerEl;
+// 在使用者點擊時「解鎖」<audio> 元素：靜音播一下馬上暫停歸零，之後從非點擊情境也能播
+let _soundsPrimed = false;
+function primeEl(el) {
+  if (!el) return;
   el.muted = true;
   const p = el.play();
   if (p && p.then) {
-    p.then(() => { el.pause(); el.currentTime = 0; el.muted = false; _cheerPrimed = true; })
+    p.then(() => { el.pause(); el.currentTime = 0; el.muted = false; })
      .catch(() => { el.muted = false; });
   }
+}
+function primeCheer() {
+  if (_soundsPrimed) return;
+  primeEl(cheerEl);
+  primeEl(failEl);
+  _soundsPrimed = true;
+}
+
+// 播放失敗音效(用已解鎖的 <audio> 元素)
+function failSound() {
+  if (!failEl) return;
+  try { failEl.currentTime = 0; const p = failEl.play(); if (p && p.catch) p.catch(() => {}); } catch (e) {}
 }
 
 // 過關音效：優先播真人歡呼(Web Audio buffer)；沒有的話用「人聲合成」的歡呼當後備
