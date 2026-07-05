@@ -386,7 +386,7 @@ async function startGame() {
     if (!listener) {
       // 第一次：開麥克風。之後整場重用同一個，不再每輪開開關關
       listener = new DrumListener({
-        onHit: () => { flashHit(); if (game) game.registerHit(); },
+        onHit: () => { if (game) game.registerHit(); },
         onLevel: (lv) => {
           els.meterFill.style.width = Math.round(lv * 100) + "%";
           if (lv > _peakMax) _peakMax = lv;
