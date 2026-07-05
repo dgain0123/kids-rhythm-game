@@ -1,8 +1,6 @@
 {
   "_說明": "登記可以選的角色。要加新角色：把圖片(建議透明背景 PNG、正方形)放進這個 characters/ 資料夾，然後在下面 list 加一筆 { id, name, img }。用 emoji 當角色就寫 emoji 欄、不用放圖。",
   "characters": [
-    { "id": "cat", "name": "小貓", "emoji": "🐱" },
-    { "id": "dino", "name": "恐龍", "emoji": "🦖" },
-    { "id": "bear", "name": "小熊", "emoji": "🧸" }
+    { "id": "pikachu", "name": "皮卡丘", "img": "pikachu.webp" }
   ]
 }
