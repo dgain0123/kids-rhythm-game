@@ -64,11 +64,13 @@ function onState(state, info) {
       celebrateSound();
       stopListening();
       els.retry.hidden = false;
+      els.retry.scrollIntoView({ behavior: "smooth", block: "center" });
       break;
     case "fail":
       els.status.textContent = "哎呀～打太多下了！再試1次";
       stopListening();
       els.retry.hidden = false;
+      els.retry.scrollIntoView({ behavior: "smooth", block: "center" });
       break;
   }
 }
