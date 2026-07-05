@@ -12,11 +12,13 @@ export class DrumListener {
     this.running = false;
 
     // 可調參數
-    this.threshold = 0.12;      // 觸發門檻(音量)，越小越靈敏
-    this.refractoryMs = 200;    // 打一下後多久內不再偵測，避免重複計數
+    this.threshold = 0.12;      // 使用者設的「絕對最低門檻」，越小越靈敏
+    this.refractoryMs = 400;    // 打一下後多久內不再偵測(蓋掉餘音/回音，避免一下算成多下)
+    this.riseFactor = 3.0;      // 要比背景底噪大這麼多倍才算一下
+    this.margin = 0.03;         // 額外緩衝，避免貼著底噪誤觸
+    this._ambient = 0.02;       // 自動追蹤的背景底噪
     this._lastHitTime = 0;
-    this._armed = true;         // true=目前在安靜狀態、可以再次觸發
-    this._releaseRatio = 0.5;   // 音量掉回門檻的一半才重新武裝
+    this._armed = true;         // true=目前安靜、可以再次觸發
   }
 
   async start() {
@@ -55,14 +57,21 @@ export class DrumListener {
     this.onLevel(Math.min(1, peak)); // 直接用峰值給音量條(和門檻同一把尺)
 
     const now = performance.now();
-    // 上升邊緣偵測：峰值衝過門檻，且距上次夠久，且目前是「已武裝」狀態
-    if (this._armed && peak > this.threshold && now - this._lastHitTime > this.refractoryMs) {
+    // 有效門檻 = max(使用者設的絕對門檻, 背景底噪×倍率+緩衝)
+    // → 房間吵時門檻自動抬高，安靜時維持使用者設定，兩邊都穩
+    const trigger = Math.max(this.threshold, this._ambient * this.riseFactor + this.margin);
+
+    // 相對安靜時，緩慢跟隨背景底噪(打擊當下不更新，避免把打擊算進底噪)
+    if (peak < trigger * 0.8) this._ambient = this._ambient * 0.99 + peak * 0.01;
+
+    // 打擊：明顯高過門檻、距上次夠久、且已武裝
+    if (this._armed && peak > trigger && now - this._lastHitTime > this.refractoryMs) {
       this._armed = false;
       this._lastHitTime = now;
       this.onHit(peak);
     }
-    // 峰值掉回門檻的一半以下 → 重新武裝，等待下一下
-    if (!this._armed && peak < this.threshold * this._releaseRatio) {
+    // 要等音量真的掉回接近底噪，才重新武裝(遲滯，避免餘音抖動重複觸發)
+    if (!this._armed && peak < Math.max(this.threshold * 0.5, this._ambient * 1.6)) {
       this._armed = true;
     }
 
