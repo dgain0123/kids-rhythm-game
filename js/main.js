@@ -26,6 +26,11 @@ const els = {
   winBanner: $("winBanner"),
   testCheer: $("testCheerBtn"),
   next: $("nextBtn"),
+  levelMenu: $("levelMenu"),
+  levelList: $("levelList"),
+  menuBtn: $("menuBtn"),
+  charPicker: $("charPicker"),
+  controls: document.querySelector(".controls"),
 };
 
 let _peakMax = 0; // 記錄出現過的最大峰值，判斷麥克風到底有沒有收到聲音
@@ -59,6 +64,53 @@ async function goToLevel(idx) {
 }
 
 function hasNextLevel() { return levelIdx < LEVELS.length - 1; }
+
+// 顯示關卡目錄(暫停偵測、藏遊戲畫面)
+function showMenu() {
+  if (listener) listener.pause();
+  els.winBanner.hidden = true;
+  els.levelMenu.hidden = false;
+  els.stage.style.display = "none";
+  els.controls.style.display = "none";
+  els.charPicker.style.display = "none";
+  els.hint.style.display = "none";
+  $("title").textContent = "幼兒節奏遊戲";
+}
+function hideMenu() {
+  els.levelMenu.hidden = true;
+  els.stage.style.display = "";
+  els.controls.style.display = "";
+  els.charPicker.style.display = "";
+  els.hint.style.display = "";
+}
+
+// 建立目錄：每一關一張卡片(讀該關 json 拿標題)
+async function buildLevelMenu() {
+  els.levelList.innerHTML = "";
+  for (let i = 0; i < LEVELS.length; i++) {
+    let title = `第${i + 1}關`;
+    try { const c = await loadChart(LEVELS[i]); title = c.title || title; } catch (e) {}
+    const btn = document.createElement("button");
+    btn.className = "level-card";
+    btn.innerHTML = `<span class="lv-num">${i + 1}</span><span class="lv-name">${title}</span>`;
+    btn.addEventListener("click", () => selectLevel(i));
+    els.levelList.appendChild(btn);
+  }
+}
+
+// 選了某一關：進遊戲畫面、顯示「開始遊戲」等使用者按(要有手勢才能開麥克風)
+async function selectLevel(idx) {
+  hideMenu();
+  await goToLevel(idx);
+  els.stage.className = "stage";
+  showCharacter();
+  els.start.hidden = false;
+  els.start.disabled = false;
+  els.start.textContent = "開始遊戲";
+  els.retry.hidden = true;
+  els.next.hidden = true;
+  els.status.textContent = `準備好了！打${chart.maxHits}下鼓～`;
+}
 
 function onState(state, info) {
   // stage 的 class 帶動角色的動畫(過關蹦跳、失敗搖頭等)，角色圖本身不變
@@ -333,6 +385,7 @@ els.sens.addEventListener("input", () => {
 els.start.addEventListener("click", startGame);
 els.retry.addEventListener("click", retry);
 els.next.addEventListener("click", nextLevel);
+els.menuBtn.addEventListener("click", showMenu);
 
 // 試聽歡呼：單獨播放這段歡呼(不玩遊戲、不放彩帶、不碰麥克風)，用來隔離「斷掉」是檔案還是遊戲負載
 els.testCheer.addEventListener("click", () => {
@@ -342,11 +395,16 @@ els.testCheer.addEventListener("click", () => {
 
 (async () => {
   const params = new URLSearchParams(location.search);
-  const lv = parseInt(params.get("level"), 10);
-  await goToLevel(Number.isFinite(lv) ? lv - 1 : 0); // ?level=2 → 第2關
-  await initCharacters({ face: els.face, picker: $("charPicker") });
+  await initCharacters({ face: els.face, picker: els.charPicker });
   updateThreshMark(sensToThreshold(parseFloat(els.sens.value)));
   preloadCheer(); // 有 sounds/cheer.mp3 就優先用真人歡呼
+  await buildLevelMenu();
+  const lv = parseInt(params.get("level"), 10);
+  if (Number.isFinite(lv) && lv >= 1 && lv <= LEVELS.length) {
+    await selectLevel(lv - 1); // ?level=2 → 直接進第2關
+  } else {
+    showMenu();                // 沒指定就先看目錄
+  }
   // 需要除錯麥克風時，用 index.html?debug=1 打開診斷面板
   if (params.get("debug")) els.debug.hidden = false;
 })();

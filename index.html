@@ -13,6 +13,11 @@
     <h1 id="title">幼兒節奏遊戲</h1>
     <p id="hint">看到音符，打1下鼓！</p>
 
+    <div id="levelMenu" hidden>
+      <h2 class="menu-title">選擇關卡 🥁</h2>
+      <div id="levelList"></div>
+    </div>
+
     <div id="charPicker" class="char-picker"></div>
 
     <div id="stage" class="stage">
@@ -36,7 +41,10 @@
         <span>很靈敏</span>
       </div>
       <button id="startBtn">開始遊戲</button>
-      <button id="testCheerBtn" type="button" class="mini-btn">🔊 試聽歡呼</button>
+      <div class="mini-row">
+        <button id="menuBtn" type="button" class="mini-btn">☰ 選關</button>
+        <button id="testCheerBtn" type="button" class="mini-btn">🔊 試聽歡呼</button>
+      </div>
     </div>
 
     <pre id="debug" hidden>診斷：尚未開始</pre>
