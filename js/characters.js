@@ -25,7 +25,7 @@ function renderCurrent() {
   // 每隻角色包一層，加上號碼牌(第幾隻)
   let html = "";
   for (let i = 1; i <= charCount; i++) {
-    html += `<div class="char-item"><span class="char-num">${i}</span>${mediaHTML(ch, "char-media")}</div>`;
+    html += `<div class="char-item char-${ch.id}"><span class="char-num">${i}</span>${mediaHTML(ch, "char-media")}</div>`;
   }
   els.face.innerHTML = html;
   // 選單高亮
