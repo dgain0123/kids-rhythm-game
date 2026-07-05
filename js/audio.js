@@ -13,7 +13,7 @@ export class DrumListener {
 
     // 可調參數
     this.threshold = 0.12;      // 使用者設的「絕對最低門檻」，越小越靈敏
-    this.refractoryMs = 400;    // 打一下後多久內不再偵測(蓋掉餘音/回音，避免一下算成多下)
+    this.refractoryMs = 130;    // 打一下後多久內不再偵測(短一點，才抓得到快速打的第二下；防餘音重複靠下面的遲滯武裝)
     this.riseFactor = 3.0;      // 要比背景底噪大這麼多倍才算一下
     this.margin = 0.03;         // 額外緩衝，避免貼著底噪誤觸
     this.warmupMs = 600;        // 開/恢復麥克風後的暖機期，忽略裝置初始化的爆音

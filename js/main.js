@@ -157,6 +157,20 @@ function getCtx() {
   return audioCtx;
 }
 
+// Safari 解鎖：一定要在使用者點擊時，播一個極短的靜音 buffer，Web Audio 之後才能從任何情境播放
+let _audioUnlocked = false;
+function unlockAudio() {
+  const ctx = getCtx();
+  if (ctx.state === "suspended") ctx.resume();
+  if (_audioUnlocked) return;
+  try {
+    const b = ctx.createBuffer(1, 1, 22050);
+    const s = ctx.createBufferSource();
+    s.buffer = b; s.connect(ctx.destination); s.start(0);
+    _audioUnlocked = true;
+  } catch (e) { /* 忽略 */ }
+}
+
 // 預先載入「真人歡呼」音檔(可有可無)。放 sounds/cheer.mp3 就會優先用真人聲。
 // 用 HTMLAudioElement 播放：獨立媒體管線，比 Web Audio buffer 更不怕主執行緒卡頓
 let cheerSrc = null;
@@ -188,10 +202,7 @@ function celebrateSound() {
       s.start();
       return;
     }
-    if (cheerSrc) { // 後備：buffer 沒解碼成功就用 <audio>
-      new Audio(cheerSrc).play().catch(() => {});
-      return;
-    }
+    // buffer 沒解碼成功 → 往下用「合成人聲歡呼」(也走 Web Audio，一定有聲)
 
     // ↓↓ 以下是沒有真人音檔時的「合成後備」歡呼
     // 主鏈：master → 壓縮器 → 喇叭
@@ -316,7 +327,7 @@ async function startGame() {
   els.start.disabled = true;
   els.start.textContent = "開麥克風中…";
   try {
-    getCtx(); // 趁「開始遊戲」這個使用者手勢，解鎖共用 AudioContext，過關才播得出歡呼
+    unlockAudio(); // 趁「開始遊戲」這個使用者手勢，解鎖 Web Audio，過關才播得出歡呼
     const th = sensToThreshold(parseFloat(els.sens.value));
     // 麥克風串流若已死掉(當機/被系統收回)，丟掉重開，避免後面幾關讀到全 0
     if (listener && !listener.isLive()) { listener.stop(); listener = null; }
