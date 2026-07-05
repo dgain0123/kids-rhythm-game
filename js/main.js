@@ -1,8 +1,12 @@
 // main.js — 串接：載入譜 → 麥克風 → 遊戲邏輯 → 畫面
 import { DrumListener } from "./audio.js";
 import { Game } from "./game.js";
-import { drawNote, confetti } from "./render.js";
+import { drawNotes, confetti } from "./render.js";
 import { initCharacters, showCharacter } from "./characters.js";
+
+// 關卡清單(依順序)。新增關卡就在 charts/ 加 levelN.json 並加進這裡
+const LEVELS = ["level1", "level2"];
+let levelIdx = 0;
 
 const $ = (id) => document.getElementById(id);
 
@@ -21,6 +25,7 @@ const els = {
   debug: $("debug"),
   winBanner: $("winBanner"),
   testCheer: $("testCheerBtn"),
+  next: $("nextBtn"),
 };
 
 let _peakMax = 0; // 記錄出現過的最大峰值，判斷麥克風到底有沒有收到聲音
@@ -38,20 +43,35 @@ let listener = null;
 let game = null;
 let chart = null;
 
-async function loadChart() {
+async function loadChart(level) {
   // 加時間戳避開瀏覽器快取，改譜後重整就能立刻看到
-  const res = await fetch("./charts/level1.json?t=" + Date.now(), { cache: "no-store" });
+  const res = await fetch(`./charts/${level}.json?t=` + Date.now(), { cache: "no-store" });
   return res.json();
 }
+
+// 切到第 idx 關：載譜、更新標題/提示/譜面
+async function goToLevel(idx) {
+  levelIdx = Math.max(0, Math.min(LEVELS.length - 1, idx));
+  chart = await loadChart(LEVELS[levelIdx]);
+  $("title").textContent = chart.title;
+  els.hint.textContent = chart.hint || "";
+  drawNotes(els.noteCanvas, chart.notes);
+}
+
+function hasNextLevel() { return levelIdx < LEVELS.length - 1; }
 
 function onState(state, info) {
   // stage 的 class 帶動角色的動畫(過關蹦跳、失敗搖頭等)，角色圖本身不變
   els.stage.className = "stage " + state;
   switch (state) {
     case "ready":
-      showCharacter(); // 還原成目前選的角色(皮卡丘)
+      showCharacter(); // 還原成目前選的角色
       els.winBanner.hidden = true;
-      els.status.textContent = "準備好了！打1下鼓～";
+      els.next.hidden = true;
+      els.status.textContent = `準備好了！打${info.maxHits}下鼓～`;
+      break;
+    case "progress":
+      els.status.textContent = `很好！再打 ${info.maxHits - info.hits} 下～`;
       break;
     case "hitOnce":
       els.status.textContent = "很好！不要再打囉…";
@@ -63,7 +83,8 @@ function onState(state, info) {
       els.winBanner.hidden = false;
       els.status.textContent = "過關！你好棒！";
       els.retry.hidden = false;
-      els.retry.scrollIntoView({ behavior: "smooth", block: "center" });
+      els.next.hidden = !hasNextLevel(); // 有下一關才顯示「下一關」
+      (hasNextLevel() ? els.next : els.retry).scrollIntoView({ behavior: "smooth", block: "center" });
       setTimeout(() => confetti(els.fxCanvas), 120); // 彩帶延後，避開最重的第一幀壓到聲音
       break;
     case "fail":
@@ -272,7 +293,8 @@ async function startGame() {
 
   els.start.hidden = true;
   els.retry.hidden = true;
-  drawNote(els.noteCanvas, chart.notes[0]);
+  els.next.hidden = true;
+  drawNotes(els.noteCanvas, chart.notes);
   els.hint.textContent = chart.hint || "";
   game = new Game(chart, { onState });
   game.start();
@@ -280,7 +302,16 @@ async function startGame() {
 
 function retry() {
   els.retry.hidden = true;
-  drawNote(els.noteCanvas, chart.notes[0]);
+  els.next.hidden = true;
+  drawNotes(els.noteCanvas, chart.notes);
+  startGame();
+}
+
+// 進入下一關
+async function nextLevel() {
+  els.next.hidden = true;
+  els.retry.hidden = true;
+  await goToLevel(levelIdx + 1);
   startGame();
 }
 
@@ -301,6 +332,7 @@ els.sens.addEventListener("input", () => {
 
 els.start.addEventListener("click", startGame);
 els.retry.addEventListener("click", retry);
+els.next.addEventListener("click", nextLevel);
 
 // 試聽歡呼：單獨播放這段歡呼(不玩遊戲、不放彩帶、不碰麥克風)，用來隔離「斷掉」是檔案還是遊戲負載
 els.testCheer.addEventListener("click", () => {
@@ -309,12 +341,12 @@ els.testCheer.addEventListener("click", () => {
 });
 
 (async () => {
-  chart = await loadChart();
-  $("title").textContent = chart.title;
-  drawNote(els.noteCanvas, chart.notes[0]);
+  const params = new URLSearchParams(location.search);
+  const lv = parseInt(params.get("level"), 10);
+  await goToLevel(Number.isFinite(lv) ? lv - 1 : 0); // ?level=2 → 第2關
   await initCharacters({ face: els.face, picker: $("charPicker") });
   updateThreshMark(sensToThreshold(parseFloat(els.sens.value)));
   preloadCheer(); // 有 sounds/cheer.mp3 就優先用真人歡呼
   // 需要除錯麥克風時，用 index.html?debug=1 打開診斷面板
-  if (new URLSearchParams(location.search).get("debug")) els.debug.hidden = false;
+  if (params.get("debug")) els.debug.hidden = false;
 })();

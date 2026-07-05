@@ -1,7 +1,26 @@
 // render.js — 畫譜面音符 + 過關彩帶動畫
 
-// 在 canvas 上畫一個簡單的五線譜片段 + 一個四分音符
-export function drawNote(canvas, note) {
+// 畫一顆四分音符(黑色符頭+符桿)在 (cx, cy)
+function drawQuarter(ctx, cx, cy) {
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(-0.35);
+  ctx.fillStyle = "#111";
+  ctx.beginPath();
+  ctx.ellipse(0, 0, 13, 10, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+  ctx.strokeStyle = "#111";
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.moveTo(cx + 12, cy - 2);
+  ctx.lineTo(cx + 12, cy - 60);
+  ctx.stroke();
+}
+
+// 在 canvas 上畫五線譜 + 一排音符(可多顆，橫向平均排開)
+export function drawNotes(canvas, notes) {
+  const list = Array.isArray(notes) ? notes : [notes];
   const ctx = canvas.getContext("2d");
   const W = canvas.width, H = canvas.height;
   ctx.clearRect(0, 0, W, H);
@@ -14,30 +33,20 @@ export function drawNote(canvas, note) {
   for (let i = 0; i < 5; i++) {
     const y = top + i * lineGap;
     ctx.beginPath();
-    ctx.moveTo(W * 0.15, y);
-    ctx.lineTo(W * 0.85, y);
+    ctx.moveTo(W * 0.12, y);
+    ctx.lineTo(W * 0.88, y);
     ctx.stroke();
   }
 
-  // 四分音符（實心符頭 + 符桿）
   // 小鼓在鼓譜的位置＝五線譜「第三間」(由下往上數)＝top + 1.5 個間距
-  const cx = W / 2;
   const cy = top + lineGap * 1.5;
-  ctx.save();
-  ctx.translate(cx, cy);
-  ctx.rotate(-0.35);
-  ctx.fillStyle = "#111";
-  ctx.beginPath();
-  ctx.ellipse(0, 0, 13, 10, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
-  // 符桿
-  ctx.strokeStyle = "#111";
-  ctx.lineWidth = 4;
-  ctx.beginPath();
-  ctx.moveTo(cx + 12, cy - 2);
-  ctx.lineTo(cx + 12, cy - 60);
-  ctx.stroke();
+  const n = list.length;
+  // 把音符平均排在中間 60% 的寬度
+  const x0 = W * 0.30, x1 = W * 0.70;
+  for (let i = 0; i < n; i++) {
+    const cx = n === 1 ? W / 2 : x0 + (x1 - x0) * (i / (n - 1));
+    drawQuarter(ctx, cx, cy);
+  }
 }
 
 // 彩帶動畫（過關用）

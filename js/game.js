@@ -26,21 +26,23 @@ export class Game {
     if (this.state === "pass" || this.state === "fail") return;
 
     this.hits += 1;
+    this._clearTimer();
 
     if (this.hits > this.maxHits) {
       // 打太多下 → 失敗
-      this._clearTimer();
       this._setState("fail");
       return;
     }
 
-    // 打到剛好 maxHits 下：先進 hitOnce，開視窗等看會不會再多打
+    if (this.hits < this.maxHits) {
+      // 還沒打夠 → 鼓勵繼續打，不開過關視窗、也不會失敗
+      this._setState("progress");
+      return;
+    }
+
+    // 剛好打到 maxHits 下：開視窗等看會不會再多打(多打就失敗，沒多打就過關)
     this._setState("hitOnce");
-    this._clearTimer();
-    this._confirmTimer = setTimeout(() => {
-      // 視窗內沒有多打 → 過關
-      this._setState("pass");
-    }, this.confirmMs);
+    this._confirmTimer = setTimeout(() => this._setState("pass"), this.confirmMs);
   }
 
   reset() {

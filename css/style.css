@@ -171,6 +171,9 @@ button {
 button:active { transform: translateY(4px); box-shadow: 0 2px 0 #d63e6e; }
 button:disabled { opacity: .6; cursor: default; }
 #retryBtn { background: var(--blue); box-shadow: 0 6px 0 #3a72d6; }
+#nextBtn { background: var(--green); box-shadow: 0 6px 0 #29b07a; }
+#nextBtn:active { box-shadow: 0 2px 0 #29b07a; }
+.stage-btns { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
 .mini-btn {
   font-size: 15px; font-weight: 700;
   padding: 8px 18px;

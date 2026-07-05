@@ -1,0 +1,9 @@
+{
+  "title": "第2關：打2下",
+  "maxHits": 2,
+  "hint": "看到兩個音符，打2下鼓！",
+  "notes": [
+    { "type": "quarter", "drum": "snare" },
+    { "type": "quarter", "drum": "snare" }
+  ]
+}
