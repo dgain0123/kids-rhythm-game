@@ -79,19 +79,13 @@ html, body {
 
 .stage.hitOnce #face { transform: scale(1.1) rotate(-6deg); }
 .stage.pass  { box-shadow: 0 0 0 6px var(--green), 0 12px 40px rgba(61,220,151,.4); }
-/* 過關：角色自己開心地蹦蹦跳(一直跳) */
-.stage.pass  #face { animation: celebrate .6s ease-in-out infinite; }
+/* 過關：原本的輕彈一下 */
+.stage.pass  #face { animation: pop .5s ease; }
 .stage.fail  { box-shadow: 0 0 0 6px var(--pink), 0 12px 40px rgba(255,90,138,.35); }
 .stage.fail  #face { animation: shake .5s ease; }
 .stage.fail  .char-media { filter: grayscale(.5) opacity(.85); }
 
-@keyframes celebrate {
-  0%,100% { transform: translateY(0) rotate(0); }
-  20% { transform: translateY(-22px) rotate(-8deg); }
-  40% { transform: translateY(0) rotate(0); }
-  60% { transform: translateY(-14px) rotate(8deg); }
-  80% { transform: translateY(0) rotate(0); }
-}
+@keyframes pop { 0%{transform:scale(.6)} 60%{transform:scale(1.25)} 100%{transform:scale(1)} }
 @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-12px)} 75%{transform:translateX(12px)} }
 
 #status {
