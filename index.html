@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>幼兒節奏遊戲</title>
+  <link rel="stylesheet" href="./css/style.css" />
+</head>
+<body>
+  <canvas id="fxCanvas"></canvas>
+  <div id="app">
+    <h1 id="title">幼兒節奏遊戲</h1>
+    <p id="hint">看到音符，打一下鼓！</p>
+
+    <div id="stage" class="stage">
+      <canvas id="noteCanvas" width="560" height="160"></canvas>
+      <div id="face">🥁</div>
+      <div id="status">按「開始遊戲」，然後打一下鼓</div>
+      <div class="meter"><div id="meterFill"></div></div>
+    </div>
+
+    <div class="controls">
+      <div class="sens-row">
+        <span>不靈敏</span>
+        <input id="sensitivity" type="range" min="0.03" max="0.35" step="0.01" value="0.12" />
+        <span>很靈敏</span>
+      </div>
+      <button id="startBtn">開始遊戲</button>
+      <button id="retryBtn" hidden>再玩一次</button>
+    </div>
+  </div>
+
+  <script type="module" src="./js/main.js"></script>
+</body>
+</html>
