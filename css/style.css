@@ -86,9 +86,10 @@ html, body {
 /* 兔子耳朵很高：號碼牌放兩耳之間、偏左(絕對定位覆在圖上) */
 .char-item.char-rabbit .char-num {
   position: absolute;
-  top: 2%;
-  left: 36%;
+  top: 3%;
+  left: 40%;
   transform: translateX(-50%);
+  width: 32px; height: 32px; font-size: 21px;
 }
 .char-media { display: block; flex: 1 1 auto; min-height: 0; height: auto; max-height: 100%; width: auto; max-width: clamp(90px, 15vw, 150px); object-fit: contain; }
 /* 號碼牌：每隻動物頭上寫自己是第幾隻 */
