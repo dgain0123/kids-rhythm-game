@@ -20,6 +20,7 @@ const els = {
   sens: $("sensitivity"),
   debug: $("debug"),
   winBanner: $("winBanner"),
+  testCheer: $("testCheerBtn"),
 };
 
 let _peakMax = 0; // 記錄出現過的最大峰值，判斷麥克風到底有沒有收到聲音
@@ -83,14 +84,19 @@ function getCtx() {
 // 預先載入「真人歡呼」音檔(可有可無)。放 sounds/cheer.mp3 就會優先用真人聲。
 // 用 HTMLAudioElement 播放：獨立媒體管線，比 Web Audio buffer 更不怕主執行緒卡頓
 let cheerAudio = null;
+const CHEER_SRCS = ["./sounds/cheer.wav", "./sounds/cheer.mp3"]; // WAV 優先(免解碼)
 async function preloadCheer() {
-  try {
-    const r = await fetch("./sounds/cheer.mp3", { method: "HEAD" });
-    if (!r.ok) return;                 // 沒放檔案就算了，用合成後備
-    cheerAudio = new Audio("./sounds/cheer.mp3");
-    cheerAudio.preload = "auto";
-    cheerAudio.load();
-  } catch (e) { /* 沒有就用合成的 */ }
+  for (const src of CHEER_SRCS) {
+    try {
+      const r = await fetch(src, { method: "HEAD" });
+      if (r.ok) {
+        cheerAudio = new Audio(src);
+        cheerAudio.preload = "auto";
+        cheerAudio.load();
+        return;
+      }
+    } catch (e) { /* 試下一個 */ }
+  }
 }
 
 // 過關音效：優先播真人歡呼音檔；沒有的話用「人聲合成」的歡呼當後備
@@ -293,6 +299,13 @@ els.sens.addEventListener("input", () => {
 
 els.start.addEventListener("click", startGame);
 els.retry.addEventListener("click", retry);
+
+// 試聽歡呼：單獨播放這段歡呼(不玩遊戲、不放彩帶、不碰麥克風)，用來隔離「斷掉」是檔案還是遊戲負載
+els.testCheer.addEventListener("click", () => {
+  const src = (cheerAudio && (cheerAudio.currentSrc || cheerAudio.src)) || "./sounds/cheer.wav";
+  const a = new Audio(src);
+  a.play().catch(() => {});
+});
 
 (async () => {
   chart = await loadChart();

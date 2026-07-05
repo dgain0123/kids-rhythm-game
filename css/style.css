@@ -167,6 +167,12 @@ button {
 button:active { transform: translateY(4px); box-shadow: 0 2px 0 #d63e6e; }
 button:disabled { opacity: .6; cursor: default; }
 #retryBtn { background: var(--blue); box-shadow: 0 6px 0 #3a72d6; }
+.mini-btn {
+  font-size: 15px; font-weight: 700;
+  padding: 8px 18px;
+  background: #eef1fa; color: #5b6b8c;
+  box-shadow: 0 3px 0 #c7cfe6;
+}
 
 /* 角色選單 */
 .char-picker {
