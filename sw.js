@@ -11,7 +11,7 @@ const CORE = [
   "./js/main.js", "./js/audio.js", "./js/game.js", "./js/render.js", "./js/characters.js",
   "./charts/level1.json", "./charts/level2.json", "./charts/level3.json", "./charts/level4.json",
   "./charts/level5.json", "./charts/level6.json", "./charts/level7.json", "./charts/level8.json",
-  "./characters/index.json",
+  "./characters/index.json", "./characters/cat.png", "./characters/rabbit.png",
   "./sounds/cheer.wav", "./sounds/cheer.mp3", "./sounds/fail.wav",
   "./manifest.webmanifest", "./icon-192.png", "./icon-512.png",
 ];
