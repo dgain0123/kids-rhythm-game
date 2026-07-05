@@ -202,21 +202,20 @@ async function preloadCheer() {
 }
 
 // 在使用者點擊時「解鎖」<audio> 元素：靜音播一下馬上暫停歸零，之後從非點擊情境也能播
-let _soundsPrimed = false;
+const _primed = new WeakSet();
 function primeEl(el) {
-  if (!el) return;
+  if (!el || _primed.has(el)) return;
   el.muted = true;
   const p = el.play();
   if (p && p.then) {
-    p.then(() => { el.pause(); el.currentTime = 0; el.muted = false; })
+    p.then(() => { el.pause(); el.currentTime = 0; el.muted = false; _primed.add(el); })
      .catch(() => { el.muted = false; });
-  }
+  } else { _primed.add(el); }
 }
+// 每次開始遊戲都試著解鎖(音檔可能還在載，載好後的下一次點擊才解鎖得到)
 function primeCheer() {
-  if (_soundsPrimed) return;
   primeEl(cheerEl);
   primeEl(failEl);
-  _soundsPrimed = true;
 }
 
 // 播放失敗音效(用已解鎖的 <audio> 元素)
