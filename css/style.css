@@ -14,7 +14,7 @@ html, body {
   font-family: "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
   background: linear-gradient(160deg, var(--bg1), var(--bg2));
   overflow-x: hidden;
-  overflow-y: auto;           /* 內容太高時可以上下捲動 */
+  overflow-y: scroll;         /* 一律顯示捲軸，內容太高時才能上下捲 */
   user-select: none;
   -webkit-user-select: none;
 }
@@ -24,9 +24,9 @@ html, body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start; /* 從最上面開始排，內容再高也不會把標題頂出畫面外 */
   position: relative;
-  padding: 16px 0 32px;       /* 上下留白，避免標題/按鈕貼邊被切 */
+  padding: 14px 0 28px;
 }
 
 #title {
@@ -60,15 +60,15 @@ html, body {
 #noteCanvas {
   width: 100%;
   max-width: 560px;
-  height: 130px;
+  height: 110px;
   background: #f7f9ff;
   border-radius: 20px;
 }
 
 /* 角色圖 */
 #face {
-  width: clamp(120px, 20vw, 175px);
-  height: clamp(140px, 24vw, 205px);
+  width: clamp(100px, 16vw, 150px);
+  height: clamp(120px, 19vw, 175px);
   line-height: 1;
   transition: transform .2s;
 }
