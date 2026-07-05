@@ -219,3 +219,33 @@ button:disabled { opacity: .6; cursor: default; }
   height: 100%;
   pointer-events: none;
 }
+
+/* 過關大字 */
+#winBanner {
+  position: fixed;
+  top: 14%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 50;
+  pointer-events: none;
+  font-size: clamp(40px, 9vw, 96px);
+  font-weight: 900;
+  color: #fff;
+  text-shadow:
+    0 0 0 #ff5a8a,
+    3px 3px 0 #ffb03d,
+    6px 6px 0 #3ddc97,
+    9px 10px 24px rgba(0,0,0,.25);
+  -webkit-text-stroke: 3px #ff5a8a;
+  white-space: nowrap;
+  animation: bannerIn .5s cubic-bezier(.2,1.5,.4,1), bannerWiggle 1s ease-in-out .5s infinite;
+}
+#winBanner[hidden] { display: none; }
+@keyframes bannerIn {
+  0%   { transform: translateX(-50%) scale(0) rotate(-15deg); }
+  100% { transform: translateX(-50%) scale(1) rotate(0); }
+}
+@keyframes bannerWiggle {
+  0%,100% { transform: translateX(-50%) scale(1) rotate(-3deg); }
+  50%     { transform: translateX(-50%) scale(1.08) rotate(3deg); }
+}

@@ -41,47 +41,60 @@ export function drawNote(canvas, note) {
 }
 
 // 彩帶動畫（過關用）
-export function confetti(canvas, durationMs = 3800) {
+export function confetti(canvas, durationMs = 5000) {
   const ctx = canvas.getContext("2d");
-  // 讓畫布跟整個視窗一樣大(高解析、鋪滿全螢幕)
   const W = canvas.width = window.innerWidth;
   const H = canvas.height = window.innerHeight;
-  const colors = ["#ff5a8a", "#ffd23f", "#3ddc97", "#5b9bff", "#c77dff", "#ff8a3d"];
-  const emojis = ["🎉", "🎊", "⭐", "🌟", "🎈", "🥳", "💛"];
-  const G = 0.14; // 重力
+  const colors = ["#ff5a8a", "#ffd23f", "#3ddc97", "#5b9bff", "#c77dff", "#ff8a3d", "#2ee6c9"];
+  const emojis = ["🎉", "🎊", "⭐", "🌟", "🎈", "🥳", "💛", "✨", "🎁"];
+  const G = 0.16;
+  const MAX = 900;                // 上限，避免太多卡頓
+  const emitMs = 2200;            // 這段時間內持續噴發，畫面才會一直滿
+  let pieces = [];
 
-  const pieces = [];
-  // 1) 從上方一直落下的紙屑
-  for (let i = 0; i < 170; i++) {
-    pieces.push({
-      kind: "rect", x: Math.random() * W, y: -20 - Math.random() * H,
-      r: 5 + Math.random() * 8, c: colors[(Math.random() * colors.length) | 0],
-      vy: 2 + Math.random() * 4, vx: -1.5 + Math.random() * 3,
-      rot: Math.random() * Math.PI, vr: -0.25 + Math.random() * 0.5, g: 0
-    });
+  const rect = (x, y, vx, vy, g) => ({
+    kind: "rect", x, y, vx, vy, g,
+    r: 5 + Math.random() * 9, c: colors[(Math.random() * colors.length) | 0],
+    rot: Math.random() * Math.PI, vr: -0.3 + Math.random() * 0.6
+  });
+  const emoji = (x, y, vx, vy, g) => ({
+    kind: "emoji", x, y, vx, vy, g,
+    r: 18 + Math.random() * 26, e: emojis[(Math.random() * emojis.length) | 0],
+    rot: Math.random() * Math.PI, vr: -0.3 + Math.random() * 0.6
+  });
+
+  // 一發「拉炮」：從某點往某方向錐狀噴出
+  function popper(x, y, angle, spread, count, power) {
+    for (let i = 0; i < count; i++) {
+      const a = angle + (Math.random() - 0.5) * spread;
+      const sp = power * (0.5 + Math.random());
+      const vx = Math.cos(a) * sp, vy = Math.sin(a) * sp;
+      pieces.push(Math.random() < 0.45 ? emoji(x, y, vx, vy, G) : rect(x, y, vx, vy, G));
+    }
   }
-  // 2) 從中央往外噴發的紙屑 + emoji
-  const cx = W / 2, cy = H * 0.42;
-  for (let i = 0; i < 90; i++) {
-    const ang = Math.random() * Math.PI * 2;
-    const sp = 6 + Math.random() * 12;
-    const isEmoji = Math.random() < 0.4;
-    pieces.push({
-      kind: isEmoji ? "emoji" : "rect",
-      x: cx, y: cy,
-      r: isEmoji ? 20 + Math.random() * 16 : 5 + Math.random() * 8,
-      c: colors[(Math.random() * colors.length) | 0],
-      e: emojis[(Math.random() * emojis.length) | 0],
-      vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp - 3,
-      rot: Math.random() * Math.PI, vr: -0.3 + Math.random() * 0.6, g: G
-    });
-  }
+
+  // 開場四發：左下、右下往上噴，中央爆開
+  popper(0, H, -Math.PI * 0.28, 0.5, 120, 20);        // 左下 → 右上
+  popper(W, H, -Math.PI * 0.72, 0.5, 120, 20);        // 右下 → 左上
+  popper(W / 2, H * 0.42, -Math.PI / 2, Math.PI * 2, 120, 13); // 中央全向爆
+  popper(W / 2, H * 0.42, -Math.PI / 2, Math.PI * 2, 120, 7);
 
   const start = performance.now();
   function frame(t) {
-    ctx.clearRect(0, 0, W, H);
     const life = t - start;
-    const fade = life > durationMs - 600 ? Math.max(0, (durationMs - life) / 600) : 1;
+
+    // 持續補充：上方灑落 + 兩側再噴，讓整個螢幕維持滿滿
+    if (life < emitMs && pieces.length < MAX) {
+      for (let i = 0; i < 8; i++)
+        pieces.push(rect(Math.random() * W, -20, -1 + Math.random() * 2, 2 + Math.random() * 3, 0.05));
+      if (Math.floor(life / 260) !== Math.floor((life - 16) / 260)) {
+        popper(0, H, -Math.PI * 0.28, 0.5, 25, 20);
+        popper(W, H, -Math.PI * 0.72, 0.5, 25, 20);
+      }
+    }
+
+    ctx.clearRect(0, 0, W, H);
+    const fade = life > durationMs - 700 ? Math.max(0, (durationMs - life) / 700) : 1;
     ctx.globalAlpha = fade;
     for (const p of pieces) {
       p.vy += p.g; p.x += p.vx; p.y += p.vy; p.rot += p.vr;
@@ -99,6 +112,9 @@ export function confetti(canvas, durationMs = 3800) {
       ctx.restore();
     }
     ctx.globalAlpha = 1;
+    // 清掉掉出畫面的，控制數量
+    if (pieces.length > MAX * 0.8) pieces = pieces.filter(p => p.y < H + 40);
+
     if (life < durationMs) requestAnimationFrame(frame);
     else ctx.clearRect(0, 0, W, H);
   }

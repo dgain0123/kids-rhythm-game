@@ -19,6 +19,7 @@ const els = {
   threshMark: $("threshMark"),
   sens: $("sensitivity"),
   debug: $("debug"),
+  winBanner: $("winBanner"),
 };
 
 let _peakMax = 0; // 記錄出現過的最大峰值，判斷麥克風到底有沒有收到聲音
@@ -48,6 +49,7 @@ function onState(state, info) {
   switch (state) {
     case "ready":
       showCharacter(); // 還原成目前選的角色(皮卡丘)
+      els.winBanner.hidden = true;
       els.status.textContent = "準備好了！打1下鼓～";
       break;
     case "hitOnce":
@@ -55,6 +57,7 @@ function onState(state, info) {
       break;
     case "pass":
       els.face.innerHTML = '<span class="char-emoji">🎉</span>'; // 過關把角色換成拉炮
+      els.winBanner.hidden = false;
       els.status.textContent = "過關！你好棒！";
       confetti(els.fxCanvas);
       celebrateSound();
@@ -69,17 +72,25 @@ function onState(state, info) {
   }
 }
 
-// 熱鬧的過關音效：上行小號 + 勝利大和弦 + 亮晶晶點綴（全用 Web Audio 合成）
+// 熱鬧的過關音效：全場歡呼 + 掌聲 + 勝利小號和弦（全用 Web Audio 合成，經壓縮器變大聲）
 function celebrateSound() {
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
     const now = ctx.currentTime;
 
+    // 主鏈：master → 壓縮器 → 喇叭（壓縮讓整體又滿又大聲不破）
+    const master = ctx.createGain();
+    master.gain.value = 0.95;
+    const comp = ctx.createDynamicsCompressor();
+    comp.threshold.value = -18; comp.knee.value = 20; comp.ratio.value = 4;
+    comp.attack.value = 0.003; comp.release.value = 0.25;
+    master.connect(comp); comp.connect(ctx.destination);
+
     // 一顆音符
     function tone(freq, start, dur, type = "triangle", vol = 0.3) {
       const o = ctx.createOscillator(), g = ctx.createGain();
       o.type = type; o.frequency.value = freq;
-      o.connect(g); g.connect(ctx.destination);
+      o.connect(g); g.connect(master);
       const t = now + start;
       g.gain.setValueAtTime(0.0001, t);
       g.gain.exponentialRampToValueAtTime(vol, t + 0.02);
@@ -87,20 +98,55 @@ function celebrateSound() {
       o.start(t); o.stop(t + dur + 0.05);
     }
 
-    // 1) 快速上行小號 (Do Mi Sol Do Mi Sol)
-    const run = [523, 659, 784, 1047, 1319, 1568];
-    run.forEach((f, i) => tone(f, i * 0.08, 0.18, "square", 0.22));
-
-    // 2) 勝利大和弦 (C 大三和弦，疊兩個八度) 撐住
-    const chord = [523, 659, 784, 1047];
-    chord.forEach((f) => tone(f, 0.5, 0.9, "triangle", 0.28));
-    chord.forEach((f) => tone(f / 2, 0.5, 0.9, "sawtooth", 0.12)); // 低八度加厚
-
-    // 3) 亮晶晶：和弦後灑幾顆高音
-    for (let i = 0; i < 6; i++) {
-      const f = 1568 + Math.random() * 900;
-      tone(f, 0.6 + i * 0.09, 0.15, "sine", 0.14);
+    // 做一段白噪音 buffer
+    function noiseBuffer(dur) {
+      const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * dur), ctx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+      return buf;
     }
+
+    // 全場歡呼「哇——」：帶通白噪音 + 音量湧起，用 LFO 抖動像人群
+    function crowdCheer(dur = 2.6, vol = 0.55) {
+      const src = ctx.createBufferSource(); src.buffer = noiseBuffer(dur); src.loop = true;
+      const bp = ctx.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = 1600; bp.Q.value = 0.8;
+      const g = ctx.createGain();
+      src.connect(bp); bp.connect(g); g.connect(master);
+      g.gain.setValueAtTime(0.0001, now);
+      g.gain.exponentialRampToValueAtTime(vol, now + 0.35);
+      g.gain.setValueAtTime(vol, now + dur - 0.7);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+      // 抖動濾波頻率 → 人群的起伏感
+      const lfo = ctx.createOscillator(); lfo.type = "sine"; lfo.frequency.value = 7;
+      const lg = ctx.createGain(); lg.gain.value = 500;
+      lfo.connect(lg); lg.connect(bp.frequency);
+      src.start(now); src.stop(now + dur); lfo.start(now); lfo.stop(now + dur);
+    }
+
+    // 掌聲：很多顆短促的高頻噪音（像拍手）
+    function applause(dur = 2.6, perSec = 45, vol = 0.5) {
+      const n = Math.floor(dur * perSec);
+      for (let i = 0; i < n; i++) {
+        const t = now + Math.random() * dur;
+        const b = ctx.createBufferSource(); b.buffer = noiseBuffer(0.03);
+        const hp = ctx.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = 1800;
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(vol * (0.5 + Math.random()), t);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.05);
+        b.connect(hp); hp.connect(g); g.connect(master);
+        b.start(t); b.stop(t + 0.06);
+      }
+    }
+
+    crowdCheer();
+    applause();
+
+    // 勝利小號：上行 + 大和弦（疊八度）壓在歡呼上面
+    const run = [523, 659, 784, 1047, 1319, 1568];
+    run.forEach((f, i) => tone(f, i * 0.08, 0.2, "square", 0.28));
+    const chord = [523, 659, 784, 1047];
+    chord.forEach((f) => tone(f, 0.55, 1.1, "triangle", 0.32));
+    chord.forEach((f) => tone(f / 2, 0.55, 1.1, "sawtooth", 0.14));
   } catch (e) { /* 忽略 */ }
 }
 
