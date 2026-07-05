@@ -15,8 +15,18 @@ const els = {
   noteCanvas: $("noteCanvas"),
   fxCanvas: $("fxCanvas"),
   meterFill: $("meterFill"),
+  threshMark: $("threshMark"),
   sens: $("sensitivity"),
 };
+
+// 靈敏度滑桿(0=不靈敏, 1=很靈敏) → 觸發門檻(0.02=很好觸發, 0.5=很難觸發)
+// 往「很靈敏」拉 → 門檻變低 → 更容易被打鼓觸發
+const THRESH_MIN = 0.02, THRESH_MAX = 0.5;
+function sensToThreshold(s) { return THRESH_MAX - s * (THRESH_MAX - THRESH_MIN); }
+function updateThreshMark(th) {
+  // 觸發線畫在音量條上(門檻直接對應峰值 0~1 的位置)
+  els.threshMark.style.left = Math.round(th * 100) + "%";
+}
 
 let listener = null;
 let game = null;
@@ -84,10 +94,12 @@ async function startGame() {
   els.start.textContent = "開麥克風中…";
   try {
     listener = new DrumListener({
-      onHit: () => { if (game) game.registerHit(); },
+      onHit: () => { flashHit(); if (game) game.registerHit(); },
       onLevel: (lv) => { els.meterFill.style.width = Math.round(lv * 100) + "%"; }
     });
-    listener.setThreshold(parseFloat(els.sens.value));
+    const th = sensToThreshold(parseFloat(els.sens.value));
+    listener.setThreshold(th);
+    updateThreshMark(th);
     await listener.start();
   } catch (e) {
     els.status.textContent = "拿不到麥克風權限 😵 請允許麥克風、並用 localhost 開啟";
@@ -110,9 +122,19 @@ function retry() {
   startGame();
 }
 
+// 打到一下時閃一下畫面，給校準用的即時回饋
+let _flashT = null;
+function flashHit() {
+  els.stage.classList.add("flash");
+  clearTimeout(_flashT);
+  _flashT = setTimeout(() => els.stage.classList.remove("flash"), 120);
+}
+
 // 靈敏度滑桿即時調整
 els.sens.addEventListener("input", () => {
-  if (listener) listener.setThreshold(parseFloat(els.sens.value));
+  const th = sensToThreshold(parseFloat(els.sens.value));
+  updateThreshMark(th);
+  if (listener) listener.setThreshold(th);
 });
 
 els.start.addEventListener("click", startGame);
@@ -122,4 +144,5 @@ els.retry.addEventListener("click", retry);
   chart = await loadChart();
   $("title").textContent = chart.title;
   drawNote(els.noteCanvas, chart.notes[0]);
+  updateThreshMark(sensToThreshold(parseFloat(els.sens.value)));
 })();

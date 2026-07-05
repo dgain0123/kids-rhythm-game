@@ -20,8 +20,9 @@ export function drawNote(canvas, note) {
   }
 
   // 四分音符（實心符頭 + 符桿）
+  // 小鼓在鼓譜的位置＝五線譜「第三間」(由下往上數)＝top + 1.5 個間距
   const cx = W / 2;
-  const cy = top + lineGap * 3; // 落在第二間附近
+  const cy = top + lineGap * 1.5;
   ctx.save();
   ctx.translate(cx, cy);
   ctx.rotate(-0.35);

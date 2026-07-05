@@ -88,9 +88,10 @@ html, body {
 
 /* 音量條 */
 .meter {
+  position: relative;
   width: 100%;
   max-width: 560px;
-  height: 14px;
+  height: 18px;
   background: #eef1fa;
   border-radius: 10px;
   overflow: hidden;
@@ -101,6 +102,28 @@ html, body {
   background: linear-gradient(90deg, var(--green), var(--yellow), var(--pink));
   transition: width .05s linear;
 }
+/* 觸發線：音量條超過它就會觸發 */
+#threshMark {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  left: 50%;
+  width: 3px;
+  background: #2b3a67;
+  border-radius: 2px;
+}
+#threshMark::after {
+  content: "打到這";
+  position: absolute;
+  top: -18px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 11px;
+  color: #2b3a67;
+  white-space: nowrap;
+}
+/* 偵測到一下 → 整個舞台閃一下 */
+.stage.flash { box-shadow: 0 0 0 8px var(--yellow), 0 12px 40px rgba(255,210,63,.6); }
 
 .controls {
   display: flex;

@@ -16,13 +16,16 @@
       <canvas id="noteCanvas" width="560" height="160"></canvas>
       <div id="face">🥁</div>
       <div id="status">按「開始遊戲」，然後打一下鼓</div>
-      <div class="meter"><div id="meterFill"></div></div>
+      <div class="meter">
+        <div id="meterFill"></div>
+        <div id="threshMark" title="打鼓超過這條線就會觸發"></div>
+      </div>
     </div>
 
     <div class="controls">
       <div class="sens-row">
         <span>不靈敏</span>
-        <input id="sensitivity" type="range" min="0.03" max="0.35" step="0.01" value="0.12" />
+        <input id="sensitivity" type="range" min="0" max="1" step="0.01" value="0.7" />
         <span>很靈敏</span>
       </div>
       <button id="startBtn">開始遊戲</button>
