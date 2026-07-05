@@ -5,7 +5,7 @@ import { drawNotes, confetti } from "./render.js";
 import { initCharacters, showCharacter, setCharCount } from "./characters.js";
 
 // 關卡清單(依順序)。新增關卡就在 charts/ 加 levelN.json 並加進這裡
-const LEVELS = ["level1", "level2"];
+const LEVELS = ["level1", "level2", "level3", "level4"];
 let levelIdx = 0;
 
 const $ = (id) => document.getElementById(id);

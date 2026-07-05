@@ -1,0 +1,11 @@
+{
+  "title": "第4關：打4下",
+  "maxHits": 4,
+  "hint": "看到四個音符，打4下鼓！",
+  "notes": [
+    { "type": "quarter", "drum": "snare" },
+    { "type": "quarter", "drum": "snare" },
+    { "type": "quarter", "drum": "snare" },
+    { "type": "quarter", "drum": "snare" }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "title": "第3關：打3下",
+  "maxHits": 3,
+  "hint": "看到三個音符，打3下鼓！",
+  "notes": [
+    { "type": "quarter", "drum": "snare" },
+    { "type": "quarter", "drum": "snare" },
+    { "type": "quarter", "drum": "snare" }
+  ]
+}
