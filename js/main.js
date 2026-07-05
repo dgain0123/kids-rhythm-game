@@ -181,25 +181,23 @@ let cheerSrc = null;
 let cheerEl = null; // 真人歡呼的 <audio> 元素(這台 Safari 能出聲的管線)
 let failEl = null;  // 失敗音效的 <audio> 元素
 const CHEER_SRCS = ["./sounds/cheer.wav", "./sounds/cheer.mp3"]; // WAV 優先
+// 把整個音檔抓進記憶體(blob)再建 <audio>：播放時不再發網路/範圍請求 → 大檔案離線也直接可播
+async function loadAudioEl(src) {
+  const r = await fetch(src);
+  if (!r.ok) throw new Error("not ok");
+  const el = new Audio(URL.createObjectURL(await r.blob()));
+  el.preload = "auto";
+  el.load();
+  return el;
+}
+
 async function preloadCheer() {
-  // 失敗音效
-  try { failEl = new Audio("./sounds/fail.wav"); failEl.preload = "auto"; failEl.load(); } catch (e) {}
-  // 過關歡呼
+  // 失敗音效(整包載入記憶體)
+  try { failEl = await loadAudioEl("./sounds/fail.wav"); } catch (e) {}
+  // 過關歡呼(整包載入記憶體，離線也能直接播，不受大檔範圍請求影響)
   for (const src of CHEER_SRCS) {
-    try {
-      const r = await fetch(src, { method: "HEAD" });
-      if (!r.ok) continue;
-      cheerSrc = src;
-      cheerEl = new Audio(src);
-      cheerEl.preload = "auto";
-      cheerEl.load();
-      // 順便也解碼成 Web Audio buffer 當備援(有些瀏覽器 Web Audio 比較穩)
-      try {
-        const ab = await (await fetch(src)).arrayBuffer();
-        cheerBuffer = await getCtx().decodeAudioData(ab);
-      } catch (e) { /* 沒有 buffer 就靠 <audio> */ }
-      return;
-    } catch (e) { /* 試下一個 */ }
+    try { cheerEl = await loadAudioEl(src); cheerSrc = src; return; }
+    catch (e) { /* 試下一個 */ }
   }
 }
 
