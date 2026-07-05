@@ -211,7 +211,8 @@ function celebrateSound() {
 }
 
 function stopListening() {
-  if (listener) { listener.stop(); listener = null; }
+  // 只暫停偵測，保持麥克風開著(關麥克風會讓 macOS 重設音訊裝置、害歡呼輸出閃斷)
+  if (listener) listener.pause();
 }
 
 // 讀出目前用的麥克風裝置名稱與狀態，方便判斷是不是選錯輸入
@@ -227,25 +228,32 @@ async function startGame() {
   els.start.disabled = true;
   els.start.textContent = "開麥克風中…";
   try {
-    listener = new DrumListener({
-      onHit: () => { flashHit(); if (game) game.registerHit(); },
-      onLevel: (lv) => {
-        els.meterFill.style.width = Math.round(lv * 100) + "%";
-        if (lv > _peakMax) _peakMax = lv;
-        // 即時把數值秀在診斷面板
-        els.debug.textContent =
-          `目前音量: ${lv.toFixed(3)}   出現過最大: ${_peakMax.toFixed(3)}\n` +
-          `音訊狀態: ${listener.audioCtx ? listener.audioCtx.state : "?"}   ` +
-          `取樣率: ${listener.audioCtx ? listener.audioCtx.sampleRate : "?"}\n` +
-          `麥克風: ${micInfo(listener)}`;
-      }
-    });
     const th = sensToThreshold(parseFloat(els.sens.value));
-    listener.setThreshold(th);
-    updateThreshMark(th);
-    _peakMax = 0;
-    await listener.start();
-    els.debug.textContent = "已取得麥克風，開始偵測…\n" + micInfo(listener);
+    if (!listener) {
+      // 第一次：開麥克風。之後整場重用同一個，不再每輪開開關關
+      listener = new DrumListener({
+        onHit: () => { flashHit(); if (game) game.registerHit(); },
+        onLevel: (lv) => {
+          els.meterFill.style.width = Math.round(lv * 100) + "%";
+          if (lv > _peakMax) _peakMax = lv;
+          els.debug.textContent =
+            `目前音量: ${lv.toFixed(3)}   出現過最大: ${_peakMax.toFixed(3)}\n` +
+            `音訊狀態: ${listener.audioCtx ? listener.audioCtx.state : "?"}   ` +
+            `取樣率: ${listener.audioCtx ? listener.audioCtx.sampleRate : "?"}\n` +
+            `麥克風: ${micInfo(listener)}`;
+        }
+      });
+      listener.setThreshold(th);
+      updateThreshMark(th);
+      _peakMax = 0;
+      await listener.start();
+      els.debug.textContent = "已取得麥克風，開始偵測…\n" + micInfo(listener);
+    } else {
+      // 之後幾輪：直接恢復偵測(麥克風一直開著)
+      listener.setThreshold(th);
+      updateThreshMark(th);
+      listener.resume();
+    }
   } catch (e) {
     els.status.textContent = "拿不到麥克風 😵";
     els.debug.textContent = "❌ 錯誤：" + (e && e.name) + " - " + (e && e.message);

@@ -78,6 +78,20 @@ export class DrumListener {
     requestAnimationFrame(this._loop);
   };
 
+  // 暫停偵測，但「保持麥克風與 AudioContext 開著」
+  // → 過關時不要關麥克風，避免 macOS 釋放輸入裝置時輸出閃斷(歡呼會被切一下)
+  pause() { this.running = false; }
+
+  // 從暫停恢復偵測(不用重開麥克風)
+  resume() {
+    if (!this.running && this.audioCtx) {
+      this.running = true;
+      this._armed = true;
+      requestAnimationFrame(this._loop);
+    }
+  }
+
+  // 完全關閉(釋放麥克風)。遊戲進行中不要用，避免裝置重設造成輸出閃斷
   stop() {
     this.running = false;
     if (this.stream) this.stream.getTracks().forEach(t => t.stop());
