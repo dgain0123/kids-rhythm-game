@@ -96,6 +96,16 @@ function celebrateSound() {
     const ctx = getCtx();
     const now = ctx.currentTime;
 
+    // 有真人歡呼音檔 → 乾淨單獨播放(不疊合成音、不經壓縮器)，避免被和弦壓下去而中間斷掉
+    if (cheerBuf) {
+      const s = ctx.createBufferSource(); s.buffer = cheerBuf;
+      const g = ctx.createGain(); g.gain.value = 1.0;
+      s.connect(g); g.connect(ctx.destination);
+      s.start(now);
+      return;
+    }
+
+    // ↓↓ 以下是沒有真人音檔時的「合成後備」歡呼
     // 主鏈：master → 壓縮器 → 喇叭
     const master = ctx.createGain();
     master.gain.value = 1.0;
@@ -190,18 +200,9 @@ function celebrateSound() {
       }
     }
 
-    if (cheerBuf) {
-      // 有真人音檔 → 直接播(大聲)
-      const s = ctx.createBufferSource(); s.buffer = cheerBuf;
-      const g = ctx.createGain(); g.gain.value = 1.2;
-      s.connect(g); g.connect(master); s.start(now);
-    } else {
-      // 沒音檔 → 人聲合成歡呼 + 掌聲
-      crowdVoices();
-      applause();
-    }
-
-    // 勝利小號和弦(兩種情況都疊一點，更有慶祝感)
+    // 人聲合成歡呼 + 掌聲 + 勝利小號和弦
+    crowdVoices();
+    applause();
     const run = [523, 659, 784, 1047, 1319, 1568];
     run.forEach((f, i) => tone(f, i * 0.08, 0.2, "square", 0.22));
     const chord = [523, 659, 784, 1047];
