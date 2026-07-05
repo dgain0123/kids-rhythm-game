@@ -52,6 +52,22 @@ export function confetti(canvas, durationMs = 5000) {
   const emitMs = 2000;            // 這段時間內持續噴發，畫面才會一直滿
   let pieces = [];
 
+  // 把每個 emoji 預先畫到離屏 canvas 當 sprite，之後每幀用 drawImage(便宜很多，不再逐幀 fillText)
+  const SS = 72;
+  const spriteCache = {};
+  function sprite(e) {
+    if (spriteCache[e]) return spriteCache[e];
+    const c = document.createElement("canvas");
+    c.width = c.height = SS;
+    const cx = c.getContext("2d");
+    cx.font = (SS - 12) + "px serif";
+    cx.textAlign = "center"; cx.textBaseline = "middle";
+    cx.fillText(e, SS / 2, SS / 2);
+    spriteCache[e] = c;
+    return c;
+  }
+  emojis.forEach(sprite); // 開場前先全部畫好，避免播放中才建立
+
   const rect = (x, y, vx, vy, g) => ({
     kind: "rect", x, y, vx, vy, g,
     r: 5 + Math.random() * 9, c: colors[(Math.random() * colors.length) | 0],
@@ -102,9 +118,8 @@ export function confetti(canvas, durationMs = 5000) {
       ctx.translate(p.x, p.y);
       ctx.rotate(p.rot);
       if (p.kind === "emoji") {
-        ctx.font = p.r * 2 + "px serif";
-        ctx.textAlign = "center"; ctx.textBaseline = "middle";
-        ctx.fillText(p.e, 0, 0);
+        const d = p.r * 2;
+        ctx.drawImage(sprite(p.e), -d / 2, -d / 2, d, d); // 用 sprite 貼圖，取代昂貴的 fillText
       } else {
         ctx.fillStyle = p.c;
         ctx.fillRect(-p.r / 2, -p.r / 2, p.r, p.r * 1.6);

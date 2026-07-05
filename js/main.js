@@ -57,14 +57,14 @@ function onState(state, info) {
       els.status.textContent = "很好！不要再打囉…";
       break;
     case "pass":
+      celebrateSound();   // 聲音先播，讓音訊管線先建立
+      stopListening();
       els.face.innerHTML = '<span class="char-emoji">🎉</span>'; // 過關把角色換成拉炮
       els.winBanner.hidden = false;
       els.status.textContent = "過關！你好棒！";
-      confetti(els.fxCanvas);
-      celebrateSound();
-      stopListening();
       els.retry.hidden = false;
       els.retry.scrollIntoView({ behavior: "smooth", block: "center" });
+      setTimeout(() => confetti(els.fxCanvas), 120); // 彩帶延後，避開最重的第一幀壓到聲音
       break;
     case "fail":
       els.status.textContent = "哎呀～打太多下了！再試1次";
@@ -85,16 +85,15 @@ function getCtx() {
 
 // 預先載入「真人歡呼」音檔(可有可無)。放 sounds/cheer.mp3 就會優先用真人聲。
 // 用 HTMLAudioElement 播放：獨立媒體管線，比 Web Audio buffer 更不怕主執行緒卡頓
-let cheerAudio = null;
+let cheerSrc = null;
 const CHEER_SRCS = ["./sounds/cheer.wav", "./sounds/cheer.mp3"]; // WAV 優先(免解碼)
 async function preloadCheer() {
   for (const src of CHEER_SRCS) {
     try {
       const r = await fetch(src, { method: "HEAD" });
       if (r.ok) {
-        cheerAudio = new Audio(src);
-        cheerAudio.preload = "auto";
-        cheerAudio.load();
+        cheerSrc = src;
+        new Audio(src).load(); // 先暖機讓瀏覽器快取，正式播放時另開全新 Audio
         return;
       }
     } catch (e) { /* 試下一個 */ }
@@ -107,9 +106,10 @@ function celebrateSound() {
     const ctx = getCtx();
     const now = ctx.currentTime;
 
-    // 有真人歡呼音檔 → 用 <audio> 乾淨播放(獨立管線，不怕彩帶卡頓、不疊合成音)
-    if (cheerAudio) {
-      try { cheerAudio.currentTime = 0; cheerAudio.play(); } catch (e) {}
+    // 有真人歡呼音檔 → 每次都開「全新 Audio」播放(跟試聽完全相同路徑，避開 currentTime=0 的 seek)
+    if (cheerSrc) {
+      const a = new Audio(cheerSrc);
+      a.play().catch(() => {});
       return;
     }
 
@@ -304,8 +304,7 @@ els.retry.addEventListener("click", retry);
 
 // 試聽歡呼：單獨播放這段歡呼(不玩遊戲、不放彩帶、不碰麥克風)，用來隔離「斷掉」是檔案還是遊戲負載
 els.testCheer.addEventListener("click", () => {
-  const src = (cheerAudio && (cheerAudio.currentSrc || cheerAudio.src)) || "./sounds/cheer.wav";
-  const a = new Audio(src);
+  const a = new Audio(cheerSrc || "./sounds/cheer.wav");
   a.play().catch(() => {});
 });
 
