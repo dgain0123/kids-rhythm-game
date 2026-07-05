@@ -63,23 +63,28 @@ export function drawNotes(canvas, notes) {
   // 小鼓在鼓譜的位置＝五線譜「第三間」(由下往上數)＝top + 1.5 個間距
   const cy = top + lineGap * 1.5;
   const n = list.length;
-  const x0 = W * 0.26, x1 = W * 0.74;
+  const x0 = W * 0.22, x1 = W * 0.78;
+
+  // 依「拍」定位：四分=1拍、八分=半拍 → 每拍等寬(兩個八分＝一拍＝一組)
+  const durOf = t => (t === "eighth" ? 0.5 : 1);
+  const starts = []; let acc = 0;
+  for (let i = 0; i < n; i++) { starts.push(acc); acc += durOf(list[i].type); }
+  const denom = Math.max(0.0001, acc - durOf(list[n - 1].type));
   const xs = [];
-  for (let i = 0; i < n; i++) xs.push(n === 1 ? W / 2 : x0 + (x1 - x0) * (i / (n - 1)));
+  for (let i = 0; i < n; i++) xs.push(n === 1 ? W / 2 : x0 + (x1 - x0) * (starts[i] / denom));
 
   // 先畫所有符頭 + 符桿
   for (let i = 0; i < n; i++) { drawHead(ctx, xs[i], cy); drawStem(ctx, xs[i], cy); }
 
-  // 八分音符：相連的用符樑連起來，落單的畫旗子
+  // 八分音符：每「兩個一組」(一拍)打符樑，組跟組分開；落單的畫旗子
   const yTop = cy - STEM_LEN;
   let i = 0;
   while (i < n) {
     if (list[i].type === "eighth") {
-      let j = i;
-      while (j + 1 < n && list[j + 1].type === "eighth") j++;
-      if (j > i) drawBeam(ctx, xs[i] + STEM_DX, xs[j] + STEM_DX, yTop);
-      else drawFlag(ctx, xs[i], cy);
-      i = j + 1;
+      if (i + 1 < n && list[i + 1].type === "eighth") {
+        drawBeam(ctx, xs[i] + STEM_DX, xs[i + 1] + STEM_DX, yTop); // 兩個一組
+        i += 2;
+      } else { drawFlag(ctx, xs[i], cy); i += 1; }
     } else i++;
   }
 }
