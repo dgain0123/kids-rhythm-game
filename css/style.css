@@ -78,9 +78,17 @@ html, body {
 }
 
 .stage.hitOnce #face { transform: scale(1.1) rotate(-6deg); }
-.stage.pass  { box-shadow: 0 0 0 6px var(--green), 0 12px 40px rgba(61,220,151,.4); }
-/* 過關：原本的輕彈一下 */
-.stage.pass  #face { animation: pop .5s ease; }
+/* 過關：舞台彩色閃爍 + 拉炮蹦跳，熱鬧一點 */
+.stage.pass { animation: winGlow .55s ease-in-out infinite alternate; }
+.stage.pass #face { animation: pop .5s ease, partyPulse .7s ease-in-out .5s infinite; }
+@keyframes winGlow {
+  from { box-shadow: 0 0 0 6px var(--green), 0 0 45px rgba(61,220,151,.55); }
+  to   { box-shadow: 0 0 0 11px var(--yellow), 0 0 75px rgba(255,210,63,.85); }
+}
+@keyframes partyPulse {
+  0%,100% { transform: scale(1) rotate(0); }
+  50%     { transform: scale(1.18) rotate(6deg); }
+}
 .stage.fail  { box-shadow: 0 0 0 6px var(--pink), 0 12px 40px rgba(255,90,138,.35); }
 .stage.fail  #face { animation: shake .5s ease; }
 .stage.fail  .char-media { filter: grayscale(.5) opacity(.85); }

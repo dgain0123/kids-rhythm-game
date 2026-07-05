@@ -69,21 +69,38 @@ function onState(state, info) {
   }
 }
 
-// 簡單的過關音效（不需外部檔案）
+// 熱鬧的過關音效：上行小號 + 勝利大和弦 + 亮晶晶點綴（全用 Web Audio 合成）
 function celebrateSound() {
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const notes = [523, 659, 784, 1047];
-    notes.forEach((f, i) => {
+    const now = ctx.currentTime;
+
+    // 一顆音符
+    function tone(freq, start, dur, type = "triangle", vol = 0.3) {
       const o = ctx.createOscillator(), g = ctx.createGain();
-      o.frequency.value = f; o.type = "triangle";
+      o.type = type; o.frequency.value = freq;
       o.connect(g); g.connect(ctx.destination);
-      const t = ctx.currentTime + i * 0.12;
+      const t = now + start;
       g.gain.setValueAtTime(0.0001, t);
-      g.gain.exponentialRampToValueAtTime(0.3, t + 0.02);
-      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.25);
-      o.start(t); o.stop(t + 0.3);
-    });
+      g.gain.exponentialRampToValueAtTime(vol, t + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.start(t); o.stop(t + dur + 0.05);
+    }
+
+    // 1) 快速上行小號 (Do Mi Sol Do Mi Sol)
+    const run = [523, 659, 784, 1047, 1319, 1568];
+    run.forEach((f, i) => tone(f, i * 0.08, 0.18, "square", 0.22));
+
+    // 2) 勝利大和弦 (C 大三和弦，疊兩個八度) 撐住
+    const chord = [523, 659, 784, 1047];
+    chord.forEach((f) => tone(f, 0.5, 0.9, "triangle", 0.28));
+    chord.forEach((f) => tone(f / 2, 0.5, 0.9, "sawtooth", 0.12)); // 低八度加厚
+
+    // 3) 亮晶晶：和弦後灑幾顆高音
+    for (let i = 0; i < 6; i++) {
+      const f = 1568 + Math.random() * 900;
+      tone(f, 0.6 + i * 0.09, 0.15, "sine", 0.14);
+    }
   } catch (e) { /* 忽略 */ }
 }
 
