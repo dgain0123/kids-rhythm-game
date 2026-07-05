@@ -113,7 +113,7 @@ img.char-media { filter: drop-shadow(0 3px 4px rgba(80, 80, 130, .28)); }
   font-size: clamp(64px, 12vw, 120px);
 }
 
-.stage.hitOnce #face { transform: scale(1.1) rotate(-6deg); }
+/* 打到剛好那下不做任何變化，避免偷偷提示「打夠了」 */
 /* 過關：舞台彩色閃爍 + 拉炮蹦跳，熱鬧一點 */
 .stage.pass { animation: winGlow .55s ease-in-out infinite alternate; }
 .stage.pass #face { animation: pop .5s ease, partyPulse .7s ease-in-out .5s infinite; }
