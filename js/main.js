@@ -2,7 +2,7 @@
 import { DrumListener } from "./audio.js";
 import { Game } from "./game.js";
 import { drawNotes, confetti } from "./render.js";
-import { initCharacters, showCharacter } from "./characters.js";
+import { initCharacters, showCharacter, setCharCount } from "./characters.js";
 
 // 關卡清單(依順序)。新增關卡就在 charts/ 加 levelN.json 並加進這裡
 const LEVELS = ["level1", "level2"];
@@ -62,6 +62,8 @@ async function goToLevel(idx) {
   $("title").textContent = chart.title;
   els.hint.textContent = chart.hint || "";
   drawNotes(els.noteCanvas, chart.notes);
+  setCharCount(chart.maxHits); // 要打幾下就顯示幾隻角色
+  showCharacter();
 }
 
 function hasNextLevel() { return levelIdx < LEVELS.length - 1; }
@@ -132,7 +134,7 @@ function onState(state, info) {
     case "pass":
       celebrateSound();   // 聲音先播，讓音訊管線先建立
       stopListening();
-      els.face.innerHTML = '<span class="char-emoji">🎉</span>'; // 過關把角色換成拉炮
+      els.face.innerHTML = '<span class="char-emoji">🎉</span>'.repeat(info.maxHits); // 過關換成拉炮(數量對應)
       els.winBanner.hidden = false;
       els.status.textContent = "過關！你好棒！";
       els.retry.hidden = false;

@@ -14,10 +14,15 @@ function mediaHTML(ch, cls) {
   return `<span class="${cls} char-emoji">${ch.emoji || "❓"}</span>`;
 }
 
+let charCount = 1; // 要顯示幾隻(＝該關要打幾下)
+
+// 設定角色數量(第2關打2下就顯示2隻)
+export function setCharCount(n) { charCount = Math.max(1, n | 0); }
+
 function renderCurrent() {
   const ch = list.find(c => c.id === currentId) || list[0];
   if (!ch) { els.face.textContent = "🙂"; return; }
-  els.face.innerHTML = mediaHTML(ch, "char-media");
+  els.face.innerHTML = mediaHTML(ch, "char-media").repeat(charCount);
   // 選單高亮
   [...els.picker.querySelectorAll(".char-btn")].forEach(b =>
     b.classList.toggle("active", b.dataset.id === ch.id));

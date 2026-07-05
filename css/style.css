@@ -65,20 +65,24 @@ html, body {
   border-radius: 20px;
 }
 
-/* 角色圖 */
+/* 角色圖(可多隻並排＝該關要打幾下) */
 #face {
-  width: clamp(100px, 16vw, 150px);
   height: clamp(120px, 19vw, 175px);
+  max-width: 92vw;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
   line-height: 1;
   transition: transform .2s;
 }
-.char-media { display: block; width: 100%; height: 100%; object-fit: contain; }
+.char-media { display: block; height: 100%; width: auto; max-width: clamp(90px, 15vw, 150px); object-fit: contain; }
 /* 淡陰影，讓白色角色(如兔子)在淺背景上也看得清楚 */
 img.char-media { filter: drop-shadow(0 3px 4px rgba(80, 80, 130, .28)); }
 .char-emoji {
   display: flex; align-items: center; justify-content: center;
   height: 100%;
-  font-size: clamp(110px, 22vw, 180px);
+  font-size: clamp(80px, 15vw, 150px);
 }
 
 .stage.hitOnce #face { transform: scale(1.1) rotate(-6deg); }
