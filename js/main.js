@@ -460,6 +460,13 @@ els.retry.addEventListener("click", retry);
 els.next.addEventListener("click", nextLevel);
 els.menuBtn.addEventListener("click", showMenu);
 
+// 註冊 Service Worker → 離線也能玩、可加到主畫面
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./sw.js").catch(() => {});
+  });
+}
+
 // 重連麥克風：完全重開麥克風並重新開始本關(麥克風卡住時的救命按鈕)
 els.reconnect.addEventListener("click", async () => {
   if (listener) { listener.stop(); listener = null; }
