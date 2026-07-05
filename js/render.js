@@ -48,8 +48,8 @@ export function confetti(canvas, durationMs = 5000) {
   const colors = ["#ff5a8a", "#ffd23f", "#3ddc97", "#5b9bff", "#c77dff", "#ff8a3d", "#2ee6c9"];
   const emojis = ["🎉", "🎊", "⭐", "🌟", "🎈", "🥳", "💛", "✨", "🎁"];
   const G = 0.16;
-  const MAX = 900;                // 上限，避免太多卡頓
-  const emitMs = 2200;            // 這段時間內持續噴發，畫面才會一直滿
+  const MAX = 420;                // 上限，避免太多卡頓拖累音訊
+  const emitMs = 2000;            // 這段時間內持續噴發，畫面才會一直滿
   let pieces = [];
 
   const rect = (x, y, vx, vy, g) => ({
@@ -69,15 +69,15 @@ export function confetti(canvas, durationMs = 5000) {
       const a = angle + (Math.random() - 0.5) * spread;
       const sp = power * (0.5 + Math.random());
       const vx = Math.cos(a) * sp, vy = Math.sin(a) * sp;
-      pieces.push(Math.random() < 0.45 ? emoji(x, y, vx, vy, G) : rect(x, y, vx, vy, G));
+      pieces.push(Math.random() < 0.22 ? emoji(x, y, vx, vy, G) : rect(x, y, vx, vy, G));
     }
   }
 
   // 開場四發：左下、右下往上噴，中央爆開
-  popper(0, H, -Math.PI * 0.28, 0.5, 120, 20);        // 左下 → 右上
-  popper(W, H, -Math.PI * 0.72, 0.5, 120, 20);        // 右下 → 左上
-  popper(W / 2, H * 0.42, -Math.PI / 2, Math.PI * 2, 120, 13); // 中央全向爆
-  popper(W / 2, H * 0.42, -Math.PI / 2, Math.PI * 2, 120, 7);
+  popper(0, H, -Math.PI * 0.28, 0.5, 65, 20);         // 左下 → 右上
+  popper(W, H, -Math.PI * 0.72, 0.5, 65, 20);         // 右下 → 左上
+  popper(W / 2, H * 0.42, -Math.PI / 2, Math.PI * 2, 70, 13); // 中央全向爆
+  popper(W / 2, H * 0.42, -Math.PI / 2, Math.PI * 2, 60, 7);
 
   const start = performance.now();
   function frame(t) {
@@ -85,11 +85,11 @@ export function confetti(canvas, durationMs = 5000) {
 
     // 持續補充：上方灑落 + 兩側再噴，讓整個螢幕維持滿滿
     if (life < emitMs && pieces.length < MAX) {
-      for (let i = 0; i < 8; i++)
+      for (let i = 0; i < 4; i++)
         pieces.push(rect(Math.random() * W, -20, -1 + Math.random() * 2, 2 + Math.random() * 3, 0.05));
-      if (Math.floor(life / 260) !== Math.floor((life - 16) / 260)) {
-        popper(0, H, -Math.PI * 0.28, 0.5, 25, 20);
-        popper(W, H, -Math.PI * 0.72, 0.5, 25, 20);
+      if (Math.floor(life / 320) !== Math.floor((life - 16) / 320)) {
+        popper(0, H, -Math.PI * 0.28, 0.5, 12, 20);
+        popper(W, H, -Math.PI * 0.72, 0.5, 12, 20);
       }
     }
 

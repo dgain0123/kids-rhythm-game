@@ -81,12 +81,15 @@ function getCtx() {
 }
 
 // 預先載入「真人歡呼」音檔(可有可無)。放 sounds/cheer.mp3 就會優先用真人聲。
-let cheerBuf = null;
+// 用 HTMLAudioElement 播放：獨立媒體管線，比 Web Audio buffer 更不怕主執行緒卡頓
+let cheerAudio = null;
 async function preloadCheer() {
   try {
-    const r = await fetch("./sounds/cheer.mp3?t=" + Date.now(), { cache: "no-store" });
+    const r = await fetch("./sounds/cheer.mp3", { method: "HEAD" });
     if (!r.ok) return;                 // 沒放檔案就算了，用合成後備
-    cheerBuf = await getCtx().decodeAudioData(await r.arrayBuffer());
+    cheerAudio = new Audio("./sounds/cheer.mp3");
+    cheerAudio.preload = "auto";
+    cheerAudio.load();
   } catch (e) { /* 沒有就用合成的 */ }
 }
 
@@ -96,12 +99,9 @@ function celebrateSound() {
     const ctx = getCtx();
     const now = ctx.currentTime;
 
-    // 有真人歡呼音檔 → 乾淨單獨播放(不疊合成音、不經壓縮器)，避免被和弦壓下去而中間斷掉
-    if (cheerBuf) {
-      const s = ctx.createBufferSource(); s.buffer = cheerBuf;
-      const g = ctx.createGain(); g.gain.value = 1.0;
-      s.connect(g); g.connect(ctx.destination);
-      s.start(now);
+    // 有真人歡呼音檔 → 用 <audio> 乾淨播放(獨立管線，不怕彩帶卡頓、不疊合成音)
+    if (cheerAudio) {
+      try { cheerAudio.currentTime = 0; cheerAudio.play(); } catch (e) {}
       return;
     }
 
