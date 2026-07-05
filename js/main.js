@@ -174,17 +174,37 @@ function unlockAudio() {
 // 預先載入「真人歡呼」音檔(可有可無)。放 sounds/cheer.mp3 就會優先用真人聲。
 // 用 HTMLAudioElement 播放：獨立媒體管線，比 Web Audio buffer 更不怕主執行緒卡頓
 let cheerSrc = null;
-const CHEER_SRCS = ["./sounds/cheer.wav", "./sounds/cheer.mp3"]; // WAV 優先(免解碼)
+let cheerEl = null; // 真人歡呼的 <audio> 元素(這台 Safari 能出聲的管線)
+const CHEER_SRCS = ["./sounds/cheer.wav", "./sounds/cheer.mp3"]; // WAV 優先
 async function preloadCheer() {
   for (const src of CHEER_SRCS) {
     try {
-      const r = await fetch(src);
+      const r = await fetch(src, { method: "HEAD" });
       if (!r.ok) continue;
       cheerSrc = src;
-      // 預解碼成 AudioBuffer，之後用 Web Audio 播(不受 Safari 對非點擊情境的自動播放限制)
-      cheerBuffer = await getCtx().decodeAudioData(await r.arrayBuffer());
+      cheerEl = new Audio(src);
+      cheerEl.preload = "auto";
+      cheerEl.load();
+      // 順便也解碼成 Web Audio buffer 當備援(有些瀏覽器 Web Audio 比較穩)
+      try {
+        const ab = await (await fetch(src)).arrayBuffer();
+        cheerBuffer = await getCtx().decodeAudioData(ab);
+      } catch (e) { /* 沒有 buffer 就靠 <audio> */ }
       return;
     } catch (e) { /* 試下一個 */ }
+  }
+}
+
+// 在使用者點擊時「解鎖」<audio> 元素：靜音播一下馬上暫停歸零，之後過關就能從非點擊情境播放
+let _cheerPrimed = false;
+function primeCheer() {
+  if (!cheerEl || _cheerPrimed) return;
+  const el = cheerEl;
+  el.muted = true;
+  const p = el.play();
+  if (p && p.then) {
+    p.then(() => { el.pause(); el.currentTime = 0; el.muted = false; _cheerPrimed = true; })
+     .catch(() => { el.muted = false; });
   }
 }
 
@@ -194,15 +214,27 @@ function celebrateSound() {
     const ctx = getCtx();
     const now = ctx.currentTime;
 
-    // 真人歡呼 → 用 Web Audio 播放解碼好的 buffer(開始遊戲時已解鎖，過關由麥克風觸發也能可靠播放)
+    // 1) 優先：已解鎖的 <audio> 元素(這台 Safari 能出聲的管線)
+    if (cheerEl) {
+      try {
+        cheerEl.currentTime = 0;
+        const p = cheerEl.play();
+        if (p && p.catch) p.catch(() => {});
+        if (els.debug) els.debug.textContent = `歡呼: 播 <audio>(primed=${_cheerPrimed})  ${cheerSrc}`;
+        return;
+      } catch (e) { /* 落到下面 */ }
+    }
+    // 2) 備援：Web Audio buffer
     if (cheerBuffer) {
       const s = ctx.createBufferSource();
       s.buffer = cheerBuffer;
       s.connect(ctx.destination);
       s.start();
+      if (els.debug) els.debug.textContent = `歡呼: 播 Web Audio buffer  ctx=${ctx.state}`;
       return;
     }
-    // buffer 沒解碼成功 → 往下用「合成人聲歡呼」(也走 Web Audio，一定有聲)
+    if (els.debug) els.debug.textContent = "歡呼: 用合成人聲(沒有真人音檔)";
+    // 3) 都沒有 → 往下用「合成人聲歡呼」(也走 Web Audio)
 
     // ↓↓ 以下是沒有真人音檔時的「合成後備」歡呼
     // 主鏈：master → 壓縮器 → 喇叭
@@ -327,7 +359,8 @@ async function startGame() {
   els.start.disabled = true;
   els.start.textContent = "開麥克風中…";
   try {
-    unlockAudio(); // 趁「開始遊戲」這個使用者手勢，解鎖 Web Audio，過關才播得出歡呼
+    unlockAudio(); // 趁「開始遊戲」手勢解鎖 Web Audio
+    primeCheer();  // 同一手勢解鎖真人歡呼的 <audio> 元素，過關才播得出
     const th = sensToThreshold(parseFloat(els.sens.value));
     // 麥克風串流若已死掉(當機/被系統收回)，丟掉重開，避免後面幾關讀到全 0
     if (listener && !listener.isLive()) { listener.stop(); listener = null; }
