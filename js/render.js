@@ -1,7 +1,10 @@
 // render.js — 畫譜面音符 + 過關彩帶動畫
 
-// 畫一顆四分音符(黑色符頭+符桿)在 (cx, cy)
-function drawQuarter(ctx, cx, cy) {
+const STEM_DX = 12;   // 符桿相對符頭的水平位移
+const STEM_LEN = 60;  // 符桿長度
+
+// 黑色實心符頭
+function drawHead(ctx, cx, cy) {
   ctx.save();
   ctx.translate(cx, cy);
   ctx.rotate(-0.35);
@@ -10,15 +13,34 @@ function drawQuarter(ctx, cx, cy) {
   ctx.ellipse(0, 0, 13, 10, 0, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
+}
+// 符桿
+function drawStem(ctx, cx, cy) {
   ctx.strokeStyle = "#111";
   ctx.lineWidth = 4;
   ctx.beginPath();
-  ctx.moveTo(cx + 12, cy - 2);
-  ctx.lineTo(cx + 12, cy - 60);
+  ctx.moveTo(cx + STEM_DX, cy - 2);
+  ctx.lineTo(cx + STEM_DX, cy - STEM_LEN);
   ctx.stroke();
 }
+// 單個八分音符的旗子(符尾)
+function drawFlag(ctx, cx, cy) {
+  const x = cx + STEM_DX, y = cy - STEM_LEN;
+  ctx.fillStyle = "#111";
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  ctx.quadraticCurveTo(x + 18, y + 10, x + 12, y + 28);
+  ctx.quadraticCurveTo(x + 15, y + 12, x, y + 14);
+  ctx.closePath();
+  ctx.fill();
+}
+// 符樑(把相連的八分音符連起來)
+function drawBeam(ctx, x1, x2, yTop) {
+  ctx.fillStyle = "#111";
+  ctx.fillRect(x1, yTop, x2 - x1, 7);
+}
 
-// 在 canvas 上畫五線譜 + 一排音符(可多顆，橫向平均排開)
+// 在 canvas 上畫五線譜 + 一排音符(quarter=四分、eighth=八分；相連八分自動加符樑)
 export function drawNotes(canvas, notes) {
   const list = Array.isArray(notes) ? notes : [notes];
   const ctx = canvas.getContext("2d");
@@ -33,19 +55,32 @@ export function drawNotes(canvas, notes) {
   for (let i = 0; i < 5; i++) {
     const y = top + i * lineGap;
     ctx.beginPath();
-    ctx.moveTo(W * 0.12, y);
-    ctx.lineTo(W * 0.88, y);
+    ctx.moveTo(W * 0.10, y);
+    ctx.lineTo(W * 0.90, y);
     ctx.stroke();
   }
 
   // 小鼓在鼓譜的位置＝五線譜「第三間」(由下往上數)＝top + 1.5 個間距
   const cy = top + lineGap * 1.5;
   const n = list.length;
-  // 把音符平均排在中間 60% 的寬度
-  const x0 = W * 0.30, x1 = W * 0.70;
-  for (let i = 0; i < n; i++) {
-    const cx = n === 1 ? W / 2 : x0 + (x1 - x0) * (i / (n - 1));
-    drawQuarter(ctx, cx, cy);
+  const x0 = W * 0.26, x1 = W * 0.74;
+  const xs = [];
+  for (let i = 0; i < n; i++) xs.push(n === 1 ? W / 2 : x0 + (x1 - x0) * (i / (n - 1)));
+
+  // 先畫所有符頭 + 符桿
+  for (let i = 0; i < n; i++) { drawHead(ctx, xs[i], cy); drawStem(ctx, xs[i], cy); }
+
+  // 八分音符：相連的用符樑連起來，落單的畫旗子
+  const yTop = cy - STEM_LEN;
+  let i = 0;
+  while (i < n) {
+    if (list[i].type === "eighth") {
+      let j = i;
+      while (j + 1 < n && list[j + 1].type === "eighth") j++;
+      if (j > i) drawBeam(ctx, xs[i] + STEM_DX, xs[j] + STEM_DX, yTop);
+      else drawFlag(ctx, xs[i], cy);
+      i = j + 1;
+    } else i++;
   }
 }
 

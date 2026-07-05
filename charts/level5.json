@@ -1,0 +1,12 @@
+{
+  "title": "第5關：打5下",
+  "maxHits": 5,
+  "hint": "前面兩個是快快的八分音符，總共打5下！",
+  "notes": [
+    { "type": "eighth", "drum": "snare" },
+    { "type": "eighth", "drum": "snare" },
+    { "type": "quarter", "drum": "snare" },
+    { "type": "quarter", "drum": "snare" },
+    { "type": "quarter", "drum": "snare" }
+  ]
+}
