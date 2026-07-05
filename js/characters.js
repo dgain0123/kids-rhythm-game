@@ -41,6 +41,9 @@ function renderPicker(onChange) {
   }
 }
 
+// 重新把目前選的角色畫回角色框(過關顯示拉炮後要還原時用)
+export function showCharacter() { renderCurrent(); }
+
 export async function initCharacters({ face, picker, onChange } = {}) {
   els = { face, picker };
   const res = await fetch("./characters/index.json?t=" + Date.now(), { cache: "no-store" });

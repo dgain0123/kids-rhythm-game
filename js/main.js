@@ -2,7 +2,7 @@
 import { DrumListener } from "./audio.js";
 import { Game } from "./game.js";
 import { drawNote, confetti } from "./render.js";
-import { initCharacters } from "./characters.js";
+import { initCharacters, showCharacter } from "./characters.js";
 
 const $ = (id) => document.getElementById(id);
 
@@ -47,12 +47,14 @@ function onState(state, info) {
   els.stage.className = "stage " + state;
   switch (state) {
     case "ready":
+      showCharacter(); // 還原成目前選的角色(皮卡丘)
       els.status.textContent = "準備好了！打1下鼓～";
       break;
     case "hitOnce":
       els.status.textContent = "很好！不要再打囉…";
       break;
     case "pass":
+      els.face.innerHTML = '<span class="char-emoji">🎉</span>'; // 過關把角色換成拉炮
       els.status.textContent = "過關！你好棒！";
       confetti(els.fxCanvas);
       celebrateSound();
