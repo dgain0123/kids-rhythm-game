@@ -116,8 +116,9 @@ async function selectLevel(idx) {
 }
 
 function onState(state, info) {
-  // stage 的 class 帶動角色的動畫(過關蹦跳、失敗搖頭等)，角色圖本身不變
-  els.stage.className = "stage " + state;
+  // 只換狀態 class，保留 flash(打擊閃黃)等其他 class 不被覆蓋
+  ["ready", "progress", "hitOnce", "pass", "fail"].forEach(s => els.stage.classList.remove(s));
+  els.stage.classList.add(state);
   switch (state) {
     case "ready":
       showCharacter(); // 還原成目前選的角色
