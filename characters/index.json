@@ -1,29 +1,14 @@
 {
   "_說明": "登記可以選的角色。要加新角色：把圖片(建議透明背景 PNG、正方形)放進這個 characters/ 資料夾，然後在下面 list 加一筆 { id, name, img }。用 emoji 當角色就寫 emoji 欄、不用放圖。",
   "characters": [
-    { "id": "pikachu", "name": "皮卡丘", "img": "pikachu.png" },
-    { "id": "cat", "name": "小貓", "emoji": "🐱" },
+    { "id": "cat", "name": "貓咪", "img": "cat.png" },
+    { "id": "rabbit", "name": "兔子", "img": "rabbit.png" },
     { "id": "dog", "name": "小狗", "emoji": "🐶" },
     { "id": "dino", "name": "恐龍", "emoji": "🦖" },
     { "id": "bear", "name": "小熊", "emoji": "🧸" },
-    { "id": "frog", "name": "青蛙", "emoji": "🐸" },
-    { "id": "unicorn", "name": "獨角獸", "emoji": "🦄" },
-    { "id": "panda", "name": "熊貓", "emoji": "🐼" },
-    { "id": "rabbit", "name": "兔子", "emoji": "🐰" },
-    { "id": "fox", "name": "狐狸", "emoji": "🦊" },
     { "id": "tiger", "name": "老虎", "emoji": "🐯" },
-    { "id": "lion", "name": "獅子", "emoji": "🦁" },
-    { "id": "koala", "name": "無尾熊", "emoji": "🐨" },
-    { "id": "pig", "name": "小豬", "emoji": "🐷" },
-    { "id": "monkey", "name": "猴子", "emoji": "🐵" },
-    { "id": "cow", "name": "乳牛", "emoji": "🐮" },
-    { "id": "chick", "name": "小雞", "emoji": "🐥" },
-    { "id": "penguin", "name": "企鵝", "emoji": "🐧" },
     { "id": "owl", "name": "貓頭鷹", "emoji": "🦉" },
-    { "id": "butterfly", "name": "蝴蝶", "emoji": "🦋" },
     { "id": "octopus", "name": "章魚", "emoji": "🐙" },
-    { "id": "fish", "name": "熱帶魚", "emoji": "🐠" },
-    { "id": "turtle", "name": "烏龜", "emoji": "🐢" },
-    { "id": "dragon", "name": "小龍", "emoji": "🐲" }
+    { "id": "turtle", "name": "烏龜", "emoji": "🐢" }
   ]
 }
