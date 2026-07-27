@@ -178,6 +178,16 @@ img.char-media { filter: drop-shadow(0 3px 4px rgba(80, 80, 130, .28)); }
 /* 偵測到一下 → 整個舞台閃一下 */
 .stage.flash { box-shadow: 0 0 0 8px var(--yellow), 0 12px 40px rgba(255,210,63,.6); }
 
+/* 太鼓達人式軌道(跟拍關卡遊戲中取代靜態角色列) */
+#laneCanvas {
+  width: 100%;
+  max-width: 560px;
+  height: 120px;
+  background: #fff8fb;
+  border-radius: 20px;
+}
+#laneCanvas[hidden] { display: none; }
+
 /* 跟拍關卡的預備拍倒數大字(蓋在舞台中央) */
 #countdown {
   position: absolute;

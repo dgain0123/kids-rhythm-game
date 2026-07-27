@@ -103,6 +103,89 @@ export function drawNotes(canvas, notes, state = {}) {
   }
 }
 
+// ── 太鼓達人式軌道（跟拍關卡用）──
+// 角色圖示從右往左跑，跑進左邊的判定圈時打鼓。
+// 參數：t=譜面時間(秒)、noteTimes=各音符時間、hit=各音符是否已打到、
+//       tolSec=容許誤差(秒)、fx=[{time}]最近打中的時間(爆星特效)、
+//       sprite={image, emoji}=跑動圖示(優先用角色圖，沒有就 emoji)
+export function drawLane(canvas, { t, noteTimes, hit = [], tolSec = 0, fx = [], sprite = {} }) {
+  const ctx = canvas.getContext("2d");
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  const cy = H * 0.56;
+  const hitX = W * 0.16, R = 36;
+
+  // 軌道底
+  ctx.fillStyle = "#eef1fa";
+  ctx.beginPath();
+  if (ctx.roundRect) ctx.roundRect(4, cy - 34, W - 8, 68, 34);
+  else ctx.rect(4, cy - 34, W - 8, 68);
+  ctx.fill();
+
+  // 音符間隔(用前兩個音符的距離；只有一個就當 1 秒)
+  const ioi = noteTimes.length > 1 ? noteTimes[1] - noteTimes[0] : 1;
+  // 捲動速度：一個間隔 = 0.45 個畫面寬
+  const pps = (W * 0.45) / ioi;
+
+  // 判定圈：跟著拍子脈動
+  const phase = (((t % ioi) + ioi) % ioi) / ioi;
+  const pulse = 1 + 0.10 * Math.max(0, 1 - phase * 3);
+  ctx.lineWidth = 6;
+  ctx.strokeStyle = "#ff5a8a";
+  ctx.beginPath();
+  ctx.arc(hitX, cy, R * pulse, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.lineWidth = 2.5;
+  ctx.strokeStyle = "rgba(255,90,138,.45)";
+  ctx.beginPath();
+  ctx.arc(hitX, cy, (R - 9) * pulse, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // 跑動的角色圖示(還沒打到的音符)
+  const img = sprite.image;
+  const imgOk = img && img.complete && img.naturalWidth > 0;
+  for (let i = 0; i < noteTimes.length; i++) {
+    if (hit[i]) continue; // 打到的由 fx 爆星處理，圖示消失
+    const x = hitX + (noteTimes[i] - t) * pps;
+    if (x < -70 || x > W + 70) continue;
+    const missed = t > noteTimes[i] + tolSec; // 錯過：變淡繼續往左飄走
+    ctx.save();
+    ctx.globalAlpha = missed ? 0.35 : 1;
+    // 蹦蹦跳的跑步感
+    const hop = Math.abs(Math.sin((noteTimes[i] - t) * Math.PI / (ioi / 2))) * 8;
+    const y = cy - hop;
+    if (imgOk) {
+      const S = 62;
+      ctx.drawImage(img, x - S / 2, y - S / 2 - 4, S, S);
+    } else {
+      ctx.font = "48px serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(sprite.emoji || "🥁", x, y - 2);
+    }
+    ctx.restore();
+  }
+
+  // 打中特效：判定圈爆開的圈圈 + 星星往上飄(0.5 秒)
+  for (const f of fx) {
+    const age = t - f.time;
+    if (age < 0 || age > 0.5) continue;
+    const k = age / 0.5;
+    ctx.save();
+    ctx.globalAlpha = 1 - k;
+    ctx.lineWidth = 5;
+    ctx.strokeStyle = "#ffd23f";
+    ctx.beginPath();
+    ctx.arc(hitX, cy, R + k * 70, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.font = "34px serif";
+    ctx.textAlign = "center";
+    ctx.fillText("⭐", hitX - 20, cy - 30 - k * 40);
+    ctx.fillText("✨", hitX + 24, cy - 20 - k * 55);
+    ctx.restore();
+  }
+}
+
 // 彩帶動畫（過關用）
 export function confetti(canvas, durationMs = 5000) {
   const ctx = canvas.getContext("2d");

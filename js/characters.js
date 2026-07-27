@@ -54,6 +54,11 @@ function renderPicker(onChange) {
 // 重新把目前選的角色畫回角色框(過關顯示拉炮後要還原時用)
 export function showCharacter() { renderCurrent(); }
 
+// 取得目前選中的角色資料(跟拍關卡的太鼓軌道拿它當「跑動的圖示」)
+export function getCurrentChar() {
+  return list.find(c => c.id === currentId) || list[0] || null;
+}
+
 export async function initCharacters({ face, picker, onChange } = {}) {
   els = { face, picker };
   const res = await fetch("./characters/index.json?t=" + Date.now(), { cache: "no-store" });

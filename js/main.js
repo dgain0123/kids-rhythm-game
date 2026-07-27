@@ -1,8 +1,8 @@
 // main.js — 串接：載入譜 → 麥克風 → 遊戲邏輯 → 畫面
 import { DrumListener } from "./audio.js";
 import { Game } from "./game.js";
-import { drawNotes, confetti } from "./render.js";
-import { initCharacters, showCharacter, setCharCount } from "./characters.js";
+import { drawNotes, drawLane, confetti } from "./render.js";
+import { initCharacters, showCharacter, setCharCount, getCurrentChar } from "./characters.js";
 
 // 關卡清單(依順序)。新增關卡就在 charts/ 加 levelN.json 並加進這裡
 const LEVELS = ["level1", "level2", "level3", "level4", "level5", "level6", "level7", "level8", "level9"];
@@ -32,6 +32,7 @@ const els = {
   reconnect: $("reconnectBtn"),
   charPicker: $("charPicker"),
   countdown: $("countdown"),
+  lane: $("laneCanvas"),
   controls: document.querySelector(".controls"),
 };
 
@@ -54,6 +55,14 @@ let chart = null;
 let musicEl = null;   // 背景音樂 <audio>(blob 整包載入，離線也能播)
 let rafId = null;     // 倒數/拍點高亮的 rAF 迴圈
 let _activeIdx = -1;  // 目前該打的音符索引(畫橘色高亮用)
+let laneSprite = { image: null, emoji: "🥁" }; // 太鼓軌道上跑的圖示(=目前角色)
+let laneFx = [];      // 最近打中的時間(譜面秒)，畫爆星特效用
+
+// 太鼓軌道開/關：遊戲中用軌道取代靜態角色列，過關/失敗再把角色換回來
+function showLane(on) {
+  els.lane.hidden = !on;
+  els.face.style.display = on ? "none" : "";
+}
 
 function isTimedChart(c) {
   return !!(c && c.bpm && Array.isArray(c.notes) && c.notes.length && c.notes[0].beat != null);
@@ -66,6 +75,8 @@ function stopMusic() {
   if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
   els.countdown.hidden = true;
   _activeIdx = -1;
+  laneFx = [];
+  showLane(false);
   if (musicEl) { try { musicEl.pause(); musicEl.currentTime = 0; } catch (e) {} }
 }
 // 依判定狀態重畫譜面(打到=綠、當前拍點=橘)
@@ -83,6 +94,7 @@ function startTimedLoop() {
     if (!game || !game.timed || !musicEl) return;
     if (game.state === "pass" || game.state === "fail") { els.countdown.hidden = true; return; }
     const ct = musicEl.currentTime;
+    const t = ct - lead;
     if (lead > 0 && ct < lead) {
       els.countdown.hidden = false;
       els.countdown.textContent = Math.min(4, Math.floor(ct / step) + 1);
@@ -92,7 +104,6 @@ function startTimedLoop() {
         els.status.textContent = "跟著音樂打！";
       }
       // 找「現在該打」的音符：還沒打到、離現在最近、又夠近的那個
-      const t = ct - lead;
       let act = -1, best = Infinity;
       for (let i = 0; i < game.noteTimes.length; i++) {
         if (game.hitNotes[i]) continue;
@@ -101,6 +112,15 @@ function startTimedLoop() {
       }
       if (act !== _activeIdx) { _activeIdx = act; redrawChart(); }
     }
+    // 太鼓軌道每一幀都重畫(角色一直在跑；倒數期間也先看得到角色跑進來)
+    drawLane(els.lane, {
+      t,
+      noteTimes: game.noteTimes,
+      hit: game.hitNotes,
+      tolSec: game.tolSec,
+      fx: laneFx,
+      sprite: laneSprite,
+    });
     rafId = requestAnimationFrame(tick);
   };
   rafId = requestAnimationFrame(tick);
@@ -489,12 +509,31 @@ async function startGame() {
   els.next.hidden = true;
   drawNotes(els.noteCanvas, chart.notes);
   els.hint.textContent = chart.hint || "";
-  game = new Game(chart, { onState, onNote: () => redrawChart() });
+  game = new Game(chart, {
+    onState,
+    onNote: () => {
+      // 打中：譜面上該音符變綠 + 太鼓判定圈爆星
+      const t = chartTimeNow();
+      if (typeof t === "number") laneFx.push({ time: t });
+      if (laneFx.length > 10) laneFx.shift();
+      redrawChart();
+    },
+  });
   game.start();
 
-  // 跟拍關卡：開始播音樂(內含預備拍) + 倒數/拍點高亮迴圈
+  // 跟拍關卡：開始播音樂(內含預備拍) + 倒數/太鼓軌道迴圈
   if (isTimedChart(chart) && musicEl) {
     _activeIdx = -1;
+    laneFx = [];
+    // 軌道上跑的圖示＝目前選的角色(圖片先載好；emoji 角色直接畫字)
+    const ch = getCurrentChar();
+    laneSprite = { image: null, emoji: (ch && ch.emoji) || "🥁" };
+    if (ch && ch.img) {
+      const im = new Image();
+      im.src = "characters/" + ch.img;
+      laneSprite.image = im;
+    }
+    showLane(true);
     try {
       musicEl.currentTime = 0;
       const p = musicEl.play();
