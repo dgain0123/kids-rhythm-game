@@ -12,6 +12,12 @@
     --bars N             只取前 N 小節(預設 4/4)
     --max-hits N         覆寫 maxHits(預設=音符數)
     --dedup MS           同一時間點(毫秒內)的多鼓件只留一個(預設 30)
+    --tolerance BEATS    打擊容許誤差(拍)，寫進 toleranceBeats(跟拍關卡用)
+    --music PATH         背景音樂檔路徑(相對網站根目錄)，寫進 music
+    --lead-in SEC        音樂檔開頭的預備拍長度(秒)，寫進 leadInSec
+
+MIDI 音軌：優先讀鼓軌(is_drum)；整份都沒有鼓軌時，改收所有音軌
+(Logic 匯出的軟體樂器鼓軌常常沒標 is_drum，音高照 GM 鼓對照)。
 
 這是「mid→json 轉檔」這條規則的唯一正解檔。行為由 tests/test_mid2json.py 釘住。
 """
@@ -55,19 +61,25 @@ def snap_note_type(beats: float) -> str:
 
 
 def collect_hits(pm: pretty_midi.PrettyMIDI):
-    """把所有鼓件音符收集成 (time, tick, pitch) 並依時間排序。"""
-    hits = []
-    for inst in pm.instruments:
-        if not inst.is_drum:
-            continue
-        for n in inst.notes:
-            hits.append((float(n.start), pm.time_to_tick(n.start), int(n.pitch)))
+    """收集鼓點成 (time, tick, pitch) 並依時間排序。
+    優先只收鼓軌(is_drum)；整份都沒有鼓軌時退回收所有音軌
+    (Logic 匯出常不標 is_drum，音高仍照 GM 鼓對照)。"""
+    def gather(insts):
+        out = []
+        for inst in insts:
+            for n in inst.notes:
+                out.append((float(n.start), pm.time_to_tick(n.start), int(n.pitch)))
+        return out
+
+    hits = gather(i for i in pm.instruments if i.is_drum)
+    if not hits:
+        hits = gather(pm.instruments)
     hits.sort(key=lambda h: h[0])
     return hits
 
 
 def convert(midi_path, title=None, hint=None, only=None, bars=None,
-            max_hits=None, dedup_ms=30):
+            max_hits=None, dedup_ms=30, tolerance=None, music=None, lead_in=None):
     pm = pretty_midi.PrettyMIDI(midi_path)
     resolution = pm.resolution or 480
 
@@ -111,8 +123,10 @@ def convert(midi_path, title=None, hint=None, only=None, bars=None,
     for i, n in enumerate(notes):
         if i + 1 < len(notes):
             ioi = notes[i + 1]["beat"] - n["beat"]
+        elif i > 0:
+            ioi = n["beat"] - notes[i - 1]["beat"]  # 最後一下沿用前一個間隔
         else:
-            ioi = 1.0  # 最後一下預設四分音符
+            ioi = 1.0  # 只有一個音符時預設四分音符
         n["type"] = snap_note_type(ioi)
 
     if not notes:
@@ -126,6 +140,12 @@ def convert(midi_path, title=None, hint=None, only=None, bars=None,
     }
     if hint:
         chart["hint"] = hint
+    if tolerance is not None:
+        chart["toleranceBeats"] = tolerance
+    if music:
+        chart["music"] = music
+    if lead_in is not None:
+        chart["leadInSec"] = lead_in
     return chart
 
 
@@ -139,11 +159,15 @@ def main(argv=None):
     ap.add_argument("--bars", type=int)
     ap.add_argument("--max-hits", type=int)
     ap.add_argument("--dedup", type=float, default=30)
+    ap.add_argument("--tolerance", type=float)
+    ap.add_argument("--music")
+    ap.add_argument("--lead-in", type=float, dest="lead_in")
     args = ap.parse_args(argv)
 
     only = set(s.strip() for s in args.only.split(",")) if args.only else None
     chart = convert(args.midi, title=args.title, hint=args.hint, only=only,
-                    bars=args.bars, max_hits=args.max_hits, dedup_ms=args.dedup)
+                    bars=args.bars, max_hits=args.max_hits, dedup_ms=args.dedup,
+                    tolerance=args.tolerance, music=args.music, lead_in=args.lead_in)
 
     out = args.out
     if not out:

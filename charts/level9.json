@@ -1,0 +1,51 @@
+{
+  "title": "第9關：跟著音樂打8下",
+  "bpm": 10.0,
+  "maxHits": 8,
+  "notes": [
+    {
+      "type": "eighth",
+      "drum": "snare",
+      "beat": 0.0
+    },
+    {
+      "type": "eighth",
+      "drum": "snare",
+      "beat": 0.5
+    },
+    {
+      "type": "eighth",
+      "drum": "snare",
+      "beat": 1.0
+    },
+    {
+      "type": "eighth",
+      "drum": "snare",
+      "beat": 1.5
+    },
+    {
+      "type": "eighth",
+      "drum": "snare",
+      "beat": 2.0
+    },
+    {
+      "type": "eighth",
+      "drum": "snare",
+      "beat": 2.5
+    },
+    {
+      "type": "eighth",
+      "drum": "snare",
+      "beat": 3.0
+    },
+    {
+      "type": "eighth",
+      "drum": "snare",
+      "beat": 3.5
+    }
+  ],
+  "hint": "聽音樂，跟著拍子打鼓！",
+  "toleranceBeats": 0.5,
+  "music": "./sounds/music/level9.m4a",
+  "leadInSec": 12.0
+}

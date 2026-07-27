@@ -8,10 +8,10 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "tools"))
 import mid2json  # noqa: E402
 
 
-def _make_midi(events, bpm=120):
+def _make_midi(events, bpm=120, is_drum=True):
     """events: [(beat, pitch)]，回傳寫好的暫存 MIDI 路徑。"""
     pm = pretty_midi.PrettyMIDI(initial_tempo=bpm)
-    drum = pretty_midi.Instrument(program=0, is_drum=True, name="Drums")
+    drum = pretty_midi.Instrument(program=0, is_drum=is_drum, name="Drums")
     sec_per_beat = 60.0 / bpm
     for beat, pitch in events:
         t = beat * sec_per_beat
@@ -69,6 +69,47 @@ def test_max_hits_override_and_bars():
         assert chart["maxHits"] == 1
         # 前 1 小節(4 拍) → beat < 4 全中，共 4 個
         assert len(chart["notes"]) == 4
+    finally:
+        os.remove(path)
+
+
+def test_non_drum_track_fallback():
+    """Logic 匯出常沒標 is_drum：整份沒有鼓軌時，改收所有音軌。"""
+    path = _make_midi([(0, 38), (0.5, 38), (1, 38)], is_drum=False)
+    try:
+        chart = mid2json.convert(path)
+        assert len(chart["notes"]) == 3
+        assert all(n["drum"] == "snare" for n in chart["notes"])
+    finally:
+        os.remove(path)
+
+
+def test_tolerance_music_leadin_fields():
+    """跟拍關卡的三個新欄位：toleranceBeats / music / leadInSec。"""
+    path = _make_midi([(0, 38), (1, 38)])
+    try:
+        chart = mid2json.convert(path, tolerance=0.5,
+                                 music="sounds/music/level9.m4a", lead_in=12)
+        assert chart["toleranceBeats"] == 0.5
+        assert chart["music"] == "sounds/music/level9.m4a"
+        assert chart["leadInSec"] == 12
+        # 沒給就不該出現這些欄位(舊關卡 json 不受影響)
+        plain = mid2json.convert(path)
+        assert "toleranceBeats" not in plain
+        assert "music" not in plain
+        assert "leadInSec" not in plain
+    finally:
+        os.remove(path)
+
+
+def test_slow_bpm10_eighths():
+    """BPM 10、每 3 秒一下(半拍) → beat 0,0.5,1…、type=eighth、bpm=10。"""
+    path = _make_midi([(i * 0.5, 38) for i in range(8)], bpm=10, is_drum=False)
+    try:
+        chart = mid2json.convert(path)
+        assert chart["bpm"] == 10.0
+        assert [n["beat"] for n in chart["notes"]] == [0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5]
+        assert all(n["type"] == "eighth" for n in chart["notes"])
     finally:
         os.remove(path)
 

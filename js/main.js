@@ -5,7 +5,7 @@ import { drawNotes, confetti } from "./render.js";
 import { initCharacters, showCharacter, setCharCount } from "./characters.js";
 
 // 關卡清單(依順序)。新增關卡就在 charts/ 加 levelN.json 並加進這裡
-const LEVELS = ["level1", "level2", "level3", "level4", "level5", "level6", "level7", "level8"];
+const LEVELS = ["level1", "level2", "level3", "level4", "level5", "level6", "level7", "level8", "level9"];
 let levelIdx = 0;
 
 const $ = (id) => document.getElementById(id);
@@ -31,6 +31,7 @@ const els = {
   menuBtn: $("menuBtn"),
   reconnect: $("reconnectBtn"),
   charPicker: $("charPicker"),
+  countdown: $("countdown"),
   controls: document.querySelector(".controls"),
 };
 
@@ -49,14 +50,71 @@ let listener = null;
 let game = null;
 let chart = null;
 
+// ── 跟拍關卡(chart 有 bpm/beat/music)的音樂與畫面同步 ──
+let musicEl = null;   // 背景音樂 <audio>(blob 整包載入，離線也能播)
+let rafId = null;     // 倒數/拍點高亮的 rAF 迴圈
+let _activeIdx = -1;  // 目前該打的音符索引(畫橘色高亮用)
+
+function isTimedChart(c) {
+  return !!(c && c.bpm && Array.isArray(c.notes) && c.notes.length && c.notes[0].beat != null);
+}
+// 譜面時間 = 音樂播放時間 - 預備拍長度(音樂檔前面有預備拍)
+function chartTimeNow() {
+  return musicEl ? musicEl.currentTime - (chart.leadInSec ?? 0) : undefined;
+}
+function stopMusic() {
+  if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+  els.countdown.hidden = true;
+  _activeIdx = -1;
+  if (musicEl) { try { musicEl.pause(); musicEl.currentTime = 0; } catch (e) {} }
+}
+// 依判定狀態重畫譜面(打到=綠、當前拍點=橘)
+function redrawChart() {
+  const state = game && game.timed ? { hit: game.hitNotes, active: _activeIdx } : {};
+  drawNotes(els.noteCanvas, chart.notes, state);
+}
+// 倒數 + 拍點高亮迴圈：全部以音樂播放時間為準(單一時鐘，不會漂移)
+function startTimedLoop() {
+  if (rafId) cancelAnimationFrame(rafId);
+  const lead = chart.leadInSec ?? 0;
+  const step = lead > 0 ? lead / 4 : 1; // 預備拍 4 聲
+  const tick = () => {
+    rafId = null;
+    if (!game || !game.timed || !musicEl) return;
+    if (game.state === "pass" || game.state === "fail") { els.countdown.hidden = true; return; }
+    const ct = musicEl.currentTime;
+    if (lead > 0 && ct < lead) {
+      els.countdown.hidden = false;
+      els.countdown.textContent = Math.min(4, Math.floor(ct / step) + 1);
+    } else {
+      if (!els.countdown.hidden) {
+        els.countdown.hidden = true;
+        els.status.textContent = "跟著音樂打！";
+      }
+      // 找「現在該打」的音符：還沒打到、離現在最近、又夠近的那個
+      const t = ct - lead;
+      let act = -1, best = Infinity;
+      for (let i = 0; i < game.noteTimes.length; i++) {
+        if (game.hitNotes[i]) continue;
+        const err = Math.abs(t - game.noteTimes[i]);
+        if (err <= game.tolSec * 0.6 && err < best) { best = err; act = i; }
+      }
+      if (act !== _activeIdx) { _activeIdx = act; redrawChart(); }
+    }
+    rafId = requestAnimationFrame(tick);
+  };
+  rafId = requestAnimationFrame(tick);
+}
+
 async function loadChart(level) {
   // 加時間戳避開瀏覽器快取，改譜後重整就能立刻看到
   const res = await fetch(`./charts/${level}.json?t=` + Date.now(), { cache: "no-store" });
   return res.json();
 }
 
-// 切到第 idx 關：載譜、更新標題/提示/譜面
+// 切到第 idx 關：載譜、更新標題/提示/譜面(有音樂就先整包載進記憶體)
 async function goToLevel(idx) {
+  stopMusic();
   levelIdx = Math.max(0, Math.min(LEVELS.length - 1, idx));
   chart = await loadChart(LEVELS[levelIdx]);
   $("title").textContent = chart.title;
@@ -64,12 +122,20 @@ async function goToLevel(idx) {
   drawNotes(els.noteCanvas, chart.notes);
   setCharCount(chart.maxHits); // 要打幾下就顯示幾隻角色
   showCharacter();
+  musicEl = null;
+  if (chart.music) {
+    try { musicEl = await loadAudioEl(chart.music); }
+    catch (e) { musicEl = new Audio(chart.music); } // 載不進 blob 就退回串流播放
+    // 音樂放完＝這一輪結束：還有沒打到的音符就算失敗
+    musicEl.addEventListener("ended", () => { if (game) game.finishSong(); });
+  }
 }
 
 function hasNextLevel() { return levelIdx < LEVELS.length - 1; }
 
 // 顯示關卡目錄(暫停偵測、藏遊戲畫面)
 function showMenu() {
+  stopMusic();
   if (listener) listener.pause();
   els.winBanner.hidden = true;
   els.levelMenu.hidden = false;
@@ -133,6 +199,7 @@ function onState(state, info) {
       els.status.textContent = "";
       break;
     case "pass":
+      stopMusic();
       celebrateSound();   // 聲音先播，讓音訊管線先建立
       stopListening();
       els.face.innerHTML = '<span class="char-emoji">🎉</span>'.repeat(info.maxHits); // 過關換成拉炮(數量對應)
@@ -144,8 +211,11 @@ function onState(state, info) {
       setTimeout(() => confetti(els.fxCanvas), 120); // 彩帶延後，避開最重的第一幀壓到聲音
       break;
     case "fail":
+      stopMusic();
       failSound();
-      els.status.textContent = "哎呀～打太多下了！再試1次";
+      els.status.textContent = info.timed
+        ? "有音符沒打到～再試1次！"
+        : "哎呀～打太多下了！再試1次";
       stopListening();
       els.retry.hidden = false;
       els.retry.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -383,7 +453,8 @@ async function startGame() {
     if (!listener) {
       // 第一次：開麥克風。之後整場重用同一個，不再每輪開開關關
       listener = new DrumListener({
-        onHit: () => { if (game) game.registerHit(); },
+        // 跟拍模式要帶「譜面時間」，數下數模式帶 undefined 沒影響
+        onHit: () => { if (game) game.registerHit(chartTimeNow()); },
         onLevel: (lv) => {
           els.meterFill.style.width = Math.round(lv * 100) + "%";
           if (lv > _peakMax) _peakMax = lv;
@@ -418,8 +489,20 @@ async function startGame() {
   els.next.hidden = true;
   drawNotes(els.noteCanvas, chart.notes);
   els.hint.textContent = chart.hint || "";
-  game = new Game(chart, { onState });
+  game = new Game(chart, { onState, onNote: () => redrawChart() });
   game.start();
+
+  // 跟拍關卡：開始播音樂(內含預備拍) + 倒數/拍點高亮迴圈
+  if (isTimedChart(chart) && musicEl) {
+    _activeIdx = -1;
+    try {
+      musicEl.currentTime = 0;
+      const p = musicEl.play();
+      if (p && p.catch) p.catch(() => {});
+    } catch (e) {}
+    els.status.textContent = "預備～聽拍子！";
+    startTimedLoop();
+  }
 }
 
 function retry() {

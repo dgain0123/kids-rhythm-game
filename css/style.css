@@ -178,6 +178,24 @@ img.char-media { filter: drop-shadow(0 3px 4px rgba(80, 80, 130, .28)); }
 /* 偵測到一下 → 整個舞台閃一下 */
 .stage.flash { box-shadow: 0 0 0 8px var(--yellow), 0 12px 40px rgba(255,210,63,.6); }
 
+/* 跟拍關卡的預備拍倒數大字(蓋在舞台中央) */
+#countdown {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  font-size: clamp(90px, 22vw, 200px);
+  font-weight: 900;
+  color: var(--blue);
+  text-shadow: 4px 4px 0 #fff, 8px 8px 0 rgba(0,0,0,.08);
+  animation: countPop .4s ease;
+}
+#countdown[hidden] { display: none; }
+@keyframes countPop { 0%{transform:scale(.4)} 70%{transform:scale(1.15)} 100%{transform:scale(1)} }
+
 .controls {
   display: flex;
   flex-direction: column;

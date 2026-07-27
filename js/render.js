@@ -3,20 +3,20 @@
 const STEM_DX = 12;   // 符桿相對符頭的水平位移
 const STEM_LEN = 60;  // 符桿長度
 
-// 黑色實心符頭
-function drawHead(ctx, cx, cy) {
+// 實心符頭(color: 一般黑、打到綠、當前拍點橘)
+function drawHead(ctx, cx, cy, color = "#111") {
   ctx.save();
   ctx.translate(cx, cy);
   ctx.rotate(-0.35);
-  ctx.fillStyle = "#111";
+  ctx.fillStyle = color;
   ctx.beginPath();
   ctx.ellipse(0, 0, 13, 10, 0, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
 }
 // 符桿
-function drawStem(ctx, cx, cy) {
-  ctx.strokeStyle = "#111";
+function drawStem(ctx, cx, cy, color = "#111") {
+  ctx.strokeStyle = color;
   ctx.lineWidth = 4;
   ctx.beginPath();
   ctx.moveTo(cx + STEM_DX, cy - 2);
@@ -41,8 +41,13 @@ function drawBeam(ctx, x1, x2, yTop) {
 }
 
 // 在 canvas 上畫五線譜 + 一排音符(quarter=四分、eighth=八分；相連八分自動加符樑)
-export function drawNotes(canvas, notes) {
+// state(選填)：{ hit: [true,false,...], active: 索引 }
+//   hit=true 的音符畫綠色(已打到)；active 的音符畫橘色+光圈(現在該打這個)
+export function drawNotes(canvas, notes, state = {}) {
   const list = Array.isArray(notes) ? notes : [notes];
+  const hit = state.hit || [];
+  const active = state.active ?? -1;
+  const colorOf = (i) => (hit[i] ? "#1fa96b" : i === active ? "#ff8a3d" : "#111");
   const ctx = canvas.getContext("2d");
   const W = canvas.width, H = canvas.height;
   ctx.clearRect(0, 0, W, H);
@@ -73,8 +78,17 @@ export function drawNotes(canvas, notes) {
   const xs = [];
   for (let i = 0; i < n; i++) xs.push(n === 1 ? W / 2 : x0 + (x1 - x0) * (starts[i] / denom));
 
-  // 先畫所有符頭 + 符桿
-  for (let i = 0; i < n; i++) { drawHead(ctx, xs[i], cy); drawStem(ctx, xs[i], cy); }
+  // 先畫所有符頭 + 符桿(當前拍點加一圈光暈)
+  for (let i = 0; i < n; i++) {
+    if (i === active && !hit[i]) {
+      ctx.fillStyle = "rgba(255,138,61,0.25)";
+      ctx.beginPath();
+      ctx.arc(xs[i], cy, 24, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    drawHead(ctx, xs[i], cy, colorOf(i));
+    drawStem(ctx, xs[i], cy, colorOf(i));
+  }
 
   // 八分音符：每「兩個一組」(一拍)打符樑，組跟組分開；落單的畫旗子
   const yTop = cy - STEM_LEN;
