@@ -140,7 +140,10 @@ async function goToLevel(idx) {
   $("title").textContent = chart.title;
   els.hint.textContent = chart.hint || "";
   drawNotes(els.noteCanvas, chart.notes);
-  setCharCount(chart.maxHits); // 要打幾下就顯示幾隻角色
+  // 數下數關卡：要打幾下就顯示幾隻角色(掛號碼牌)
+  // 跟拍關卡：開始前只放 1 隻、不掛號碼牌(角色會在太鼓軌道上跑)
+  if (isTimedChart(chart)) setCharCount(1, { numbers: false });
+  else setCharCount(chart.maxHits);
   showCharacter();
   musicEl = null;
   if (chart.music) {

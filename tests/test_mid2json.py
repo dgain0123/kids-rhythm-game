@@ -93,11 +93,15 @@ def test_tolerance_music_leadin_fields():
         assert chart["toleranceBeats"] == 0.5
         assert chart["music"] == "sounds/music/level9.m4a"
         assert chart["leadInSec"] == 12
+        # 節拍器細分(每關可不同；聲音烤在音樂檔，這欄位是規格記錄)
+        with_met = mid2json.convert(path, metronome="eighth")
+        assert with_met["metronome"] == "eighth"
         # 沒給就不該出現這些欄位(舊關卡 json 不受影響)
         plain = mid2json.convert(path)
         assert "toleranceBeats" not in plain
         assert "music" not in plain
         assert "leadInSec" not in plain
+        assert "metronome" not in plain
     finally:
         os.remove(path)
 

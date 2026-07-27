@@ -15,6 +15,9 @@
     --tolerance BEATS    打擊容許誤差(拍)，寫進 toleranceBeats(跟拍關卡用)
     --music PATH         背景音樂檔路徑(相對網站根目錄)，寫進 music
     --lead-in SEC        音樂檔開頭的預備拍長度(秒)，寫進 leadInSec
+    --metronome NAME     節拍器細分(如 eighth/quarter)，寫進 metronome
+                         (規矩：每個跟拍關卡的音樂都要含節拍器聲，細分每關可不同，
+                          實際聲音烤在音樂檔裡，這欄位是規格記錄)
 
 MIDI 音軌：優先讀鼓軌(is_drum)；整份都沒有鼓軌時，改收所有音軌
 (Logic 匯出的軟體樂器鼓軌常常沒標 is_drum，音高照 GM 鼓對照)。
@@ -79,7 +82,8 @@ def collect_hits(pm: pretty_midi.PrettyMIDI):
 
 
 def convert(midi_path, title=None, hint=None, only=None, bars=None,
-            max_hits=None, dedup_ms=30, tolerance=None, music=None, lead_in=None):
+            max_hits=None, dedup_ms=30, tolerance=None, music=None, lead_in=None,
+            metronome=None):
     pm = pretty_midi.PrettyMIDI(midi_path)
     resolution = pm.resolution or 480
 
@@ -146,6 +150,8 @@ def convert(midi_path, title=None, hint=None, only=None, bars=None,
         chart["music"] = music
     if lead_in is not None:
         chart["leadInSec"] = lead_in
+    if metronome:
+        chart["metronome"] = metronome
     return chart
 
 
@@ -162,12 +168,14 @@ def main(argv=None):
     ap.add_argument("--tolerance", type=float)
     ap.add_argument("--music")
     ap.add_argument("--lead-in", type=float, dest="lead_in")
+    ap.add_argument("--metronome")
     args = ap.parse_args(argv)
 
     only = set(s.strip() for s in args.only.split(",")) if args.only else None
     chart = convert(args.midi, title=args.title, hint=args.hint, only=only,
                     bars=args.bars, max_hits=args.max_hits, dedup_ms=args.dedup,
-                    tolerance=args.tolerance, music=args.music, lead_in=args.lead_in)
+                    tolerance=args.tolerance, music=args.music, lead_in=args.lead_in,
+                    metronome=args.metronome)
 
     out = args.out
     if not out:

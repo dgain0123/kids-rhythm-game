@@ -3,6 +3,7 @@
   "characters": [
     { "id": "cat", "name": "貓咪", "img": "cat.png" },
     { "id": "rabbit", "name": "兔子", "img": "rabbit.png" },
+    { "id": "cow", "name": "牛牛", "emoji": "🐮" },
     { "id": "dog", "name": "小狗", "emoji": "🐶" },
     { "id": "dino", "name": "恐龍", "emoji": "🦖" },
     { "id": "bear", "name": "小熊", "emoji": "🧸" },

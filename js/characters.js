@@ -14,18 +14,23 @@ function mediaHTML(ch, cls) {
   return `<span class="${cls} char-emoji">${ch.emoji || "❓"}</span>`;
 }
 
-let charCount = 1; // 要顯示幾隻(＝該關要打幾下)
+let charCount = 1;      // 要顯示幾隻(＝該關要打幾下)
+let showNumbers = true; // 頭上要不要掛號碼牌(跟拍關卡不用)
 
-// 設定角色數量(第2關打2下就顯示2隻)
-export function setCharCount(n) { charCount = Math.max(1, n | 0); }
+// 設定角色數量(第2關打2下就顯示2隻)；opts.numbers=false 就不掛號碼牌
+export function setCharCount(n, opts = {}) {
+  charCount = Math.max(1, n | 0);
+  showNumbers = opts.numbers !== false;
+}
 
 function renderCurrent() {
   const ch = list.find(c => c.id === currentId) || list[0];
   if (!ch) { els.face.textContent = "🙂"; return; }
-  // 每隻角色包一層，加上號碼牌(第幾隻)
+  // 每隻角色包一層，(需要的話)加上號碼牌(第幾隻)
   let html = "";
   for (let i = 1; i <= charCount; i++) {
-    html += `<div class="char-item char-${ch.id}"><span class="char-num">${i}</span>${mediaHTML(ch, "char-media")}</div>`;
+    const num = showNumbers ? `<span class="char-num">${i}</span>` : "";
+    html += `<div class="char-item char-${ch.id}">${num}${mediaHTML(ch, "char-media")}</div>`;
   }
   els.face.innerHTML = html;
   // 選單高亮
