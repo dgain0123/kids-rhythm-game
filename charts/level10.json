@@ -92,6 +92,7 @@
   "hint": "音樂變快囉，跟著拍子打鼓！",
   "toleranceBeats": 0.5,
   "music": "./sounds/music/level10.m4a",
-  "leadInSec": 6.0,
-  "metronome": "eighth"
+  "leadInSec": 7.0,
+  "metronome": "eighth",
+  "preRollSec": 1.0
 }

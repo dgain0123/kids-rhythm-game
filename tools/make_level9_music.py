@@ -29,8 +29,9 @@ import numpy as np
 from voice_count import count_voices
 
 SR = 44100
-LEAD_IN = 12.0      # 預備拍長度(秒)，= chart 的 leadInSec
 BAR = 3.0           # 一小節 3 秒(= BPM 10 的半拍，小朋友每小節打一下)
+PRE = 1.0           # 開頭靜音緩衝(躲播放起頭暫態；= chart 的 preRollSec)
+LEAD_IN = PRE + 4 * BAR  # 預備拍總長 13 秒(= chart 的 leadInSec)
 
 # 音高(Hz)
 F = {
@@ -119,9 +120,9 @@ def click(t0, freq=1100, vol=0.45):
 
 def main():
     # 預備拍：英文人聲數拍 one/two/three/four(不疊其他聲音，人聲乾淨)
-    voices = count_voices(SR)
-    for k in range(4):
-        add(k * BAR, voices[k] * 0.6)
+    # 波形不修剪(頭尾完整)，用「起音點」對齊拍點
+    for k, (v, on) in enumerate(count_voices(SR)):
+        add(PRE + k * BAR - on, v * 0.6)
 
     # 8 小節伴奏
     for b, bar in enumerate(PROG):

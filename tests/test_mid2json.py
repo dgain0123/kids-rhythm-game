@@ -91,10 +91,12 @@ def test_tolerance_music_leadin_fields():
     path = _make_midi([(0, 38), (1, 38)])
     try:
         chart = mid2json.convert(path, tolerance=0.5,
-                                 music="sounds/music/level9.m4a", lead_in=12)
+                                 music="sounds/music/level9.m4a", lead_in=12,
+                                 pre_roll=1)
         assert chart["toleranceBeats"] == 0.5
         assert chart["music"] == "sounds/music/level9.m4a"
         assert chart["leadInSec"] == 12
+        assert chart["preRollSec"] == 1
         # 節拍器細分(每關可不同；聲音烤在音樂檔，這欄位是規格記錄)
         with_met = mid2json.convert(path, metronome="eighth")
         assert with_met["metronome"] == "eighth"
@@ -104,6 +106,7 @@ def test_tolerance_music_leadin_fields():
         assert "music" not in plain
         assert "leadInSec" not in plain
         assert "metronome" not in plain
+        assert "preRollSec" not in plain
     finally:
         os.remove(path)
 

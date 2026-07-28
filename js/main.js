@@ -101,7 +101,8 @@ function redrawChart() {
 function startTimedLoop() {
   if (rafId) cancelAnimationFrame(rafId);
   const lead = chart.leadInSec ?? 0;
-  const step = lead > 0 ? lead / 4 : 1; // 預備拍 4 聲
+  const pre = chart.preRollSec ?? 0; // 音檔開頭的靜音緩衝(躲播放起頭暫態)，還沒開始數
+  const step = lead > pre ? (lead - pre) / 4 : 1; // 預備拍 4 聲
   let frame = 0;
   const tick = () => {
     rafId = null;
@@ -111,9 +112,13 @@ function startTimedLoop() {
     const ct = musicNow();
     const t = ct - lead;
     if (lead > 0 && ct < lead) {
-      els.countdown.hidden = false;
-      const num = String(Math.min(4, Math.floor(ct / step) + 1));
-      if (els.countdown.textContent !== num) els.countdown.textContent = num; // 數字沒變不動 DOM
+      if (ct < pre) {
+        els.countdown.hidden = true; // 緩衝期還沒開始數
+      } else {
+        els.countdown.hidden = false;
+        const num = String(Math.min(4, Math.floor((ct - pre) / step) + 1));
+        if (els.countdown.textContent !== num) els.countdown.textContent = num; // 數字沒變不動 DOM
+      }
     } else {
       if (!els.countdown.hidden) {
         els.countdown.hidden = true;

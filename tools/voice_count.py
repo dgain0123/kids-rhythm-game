@@ -49,29 +49,31 @@ def _say(text, sr, voice):
         os.remove(tmp)
 
 
-def _polish(x, sr):
-    """去頭尾靜音(保留緩衝) + 淡入淡出(不在這裡正規化，交給 _finalize 做整組響度對齊)。"""
-    loud = np.where(np.abs(x) > 0.003)[0]
-    if len(loud):
-        a = max(0, loud[0] - int(0.04 * sr))
-        b = min(len(x), loud[-1] + 1 + int(0.18 * sr))
-        x = x[a:b]
+def _prep(x, sr):
+    """不修剪、不淡入：保留字的完整頭尾(one 的 /w/ 滑音、four 的 /f/ 氣音與 /r/ 尾音
+    都是軟邊緣，修剪會把它們切出「卡」感——2026-07-28 教訓)。
+    只去掉編碼器 padding 的「純零」頭尾＋尾端 30ms 保險淡出，
+    並回傳「起音點」(包絡首次達峰值 10% 處)讓字能對齊拍點。"""
+    nz = np.where(np.abs(x) > 1e-4)[0]
+    if len(nz):
+        x = x[nz[0]: nz[-1] + 1]
     x = x.copy()
-    fi = min(len(x), int(0.005 * sr))
-    fo = min(len(x), int(0.12 * sr))
-    x[:fi] *= np.linspace(0, 1, fi)
+    fo = min(len(x), int(0.03 * sr))
     x[-fo:] *= np.linspace(1, 0, fo)
-    return x
+    win = int(0.01 * sr)
+    env = np.convolve(np.abs(x), np.ones(win) / win, mode="same")
+    onset = int(np.argmax(env > float(env.max()) * 0.1))
+    return x, onset / sr
 
 
 def _finalize(voices):
     """四個字整組響度對齊：每個字的 RMS 拉到一致(中位數)，再整組把峰值調到 1。
-    避免「各字各自拉滿」造成音量忽大忽小的落差感。"""
-    rms = [max(1e-9, float(np.sqrt(np.mean(v ** 2)))) for v in voices]
+    voices = [(波形, 起音秒), ...]；避免各字各自拉滿造成音量落差。"""
+    rms = [max(1e-9, float(np.sqrt(np.mean(v ** 2)))) for v, _ in voices]
     target = float(np.median(rms))
-    voices = [v * (target / r) for v, r in zip(voices, rms)]
-    peak = max(1e-9, max(float(np.max(np.abs(v))) for v in voices))
-    return [v / peak for v in voices]
+    voices = [(v * (target / r), on) for (v, on), r in zip(voices, rms)]
+    peak = max(1e-9, max(float(np.max(np.abs(v))) for v, _ in voices))
+    return [(v / peak, on) for v, on in voices]
 
 
 def _split_by_silence(x, sr):
@@ -119,14 +121,14 @@ def _from_recording(sr):
     words = [_find(w) for w in WORDS]
     if all(words):
         print("🎙 數拍人聲：使用真人錄音(逐字檔)")
-        return _finalize([_polish(_decode(p, sr), sr) for p in words])
+        return _finalize([_prep(_decode(p, sr), sr) for p in words])
     phrase = _find("count")
     if phrase:
         x = _decode(phrase, sr)
         segs = _split_by_silence(x, sr)
         if len(segs) == 4:
             print("🎙 數拍人聲：使用真人錄音(整句自動切4字)")
-            return _finalize([_polish(x[a:b], sr) for a, b in segs])
+            return _finalize([_prep(x[a:b], sr) for a, b in segs])
         raise ValueError(f"count 錄音切出 {len(segs)} 段(需要4段，字間留點空隙再錄)")
     return None
 
@@ -147,10 +149,10 @@ def _from_edge_tts(sr):
         os.close(fd)
         try:
             asyncio.run(gen_word(word, tmp))
-            voices.append(_polish(_decode(tmp, sr), sr))
+            voices.append(_prep(_decode(tmp, sr), sr))
         finally:
             os.remove(tmp)
-    print(f"🗣 數拍人聲：edge-tts {EDGE_VOICE}(逐字合成+響度對齊)")
+    print(f"🗣 數拍人聲：edge-tts {EDGE_VOICE}(逐字合成+不修剪+起音對齊)")
     return _finalize(voices)
 
 
@@ -160,12 +162,13 @@ def _from_say_phrase(sr, voice="Samantha"):
     segs = _split_by_silence(x, sr)
     if len(segs) == 4:
         print("🔈 數拍人聲：macOS say 後備")
-        return _finalize([_polish(x[a:b], sr) for a, b in segs])
-    return _finalize([_polish(_say(w, sr, voice), sr) for w in WORDS])
+        return _finalize([_prep(x[a:b], sr) for a, b in segs])
+    return _finalize([_prep(_say(w, sr, voice), sr) for w in WORDS])
 
 
 def count_voices(sr=44100, voice="Samantha"):
-    """回傳 [one, two, three, four] 四段波形(三層產生鏈，見檔頭)。"""
+    """回傳 [(波形, 起音秒), ...] 共 4 個字(三層產生鏈，見檔頭)。
+    產生器把「起音點」對齊拍點：add(拍點時間 - 起音秒, 波形)。"""
     try:
         rec = _from_recording(sr)
         if rec:
