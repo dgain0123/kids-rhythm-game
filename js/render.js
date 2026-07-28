@@ -78,11 +78,18 @@ export function drawNotes(canvas, notes, state = {}) {
   const MAX_BARS = 4;
   const visible = MAX_BARS * BPB + (MAX_BARS - 1) * BAR_GAP;
   const scrolling = total > visible;
-  const anchor = visible * 0.16; // 基準線位置(對齊下方太鼓判定圈的比例)
+  const anchor = visible * 0.16; // 基準線位置(對齊下方太鼓判定圈)
+  // 游標的「平滑位置」：音符定位用的小節空隙是階梯狀(跨小節瞬間+0.9)，
+  // 游標若直接用它會在換小節時跳一下 → 改在小節最後半拍內漸進滑過空隙
+  const posSmooth = (b) => {
+    const barF = Math.floor(b / BPB);
+    const rem = b - barF * BPB;
+    const ramp = Math.max(0, rem - (BPB - 0.5)) / 0.5; // 小節最後半拍 0→1
+    return b + (barF + ramp) * BAR_GAP;
+  };
   let offset = 0;
   if (scrolling) {
-    const cur = posOf(Math.max(0, state.curBeat ?? 0));
-    offset = cur - anchor; // 不設上限：一路滑到最後一下停在線上
+    offset = posSmooth(Math.max(0, state.curBeat ?? 0)) - anchor; // 一路滑到最後一下停在線上
   }
   const denom = Math.min(total, visible);
 
@@ -179,7 +186,9 @@ export function drawLane(canvas, { t, noteTimes, hit = [], tolSec = 0, fx = [], 
   const W = canvas.width, H = canvas.height;
   ctx.clearRect(0, 0, W, H);
   const cy = H * 0.56;
-  const hitX = W * 0.16, R = 36;
+  // 判定圈位置：寬畫布時用跟譜面基準線同一套公式 → 跟上面的紅線垂直對齊
+  const hitX = W > 560 ? 75 + (W - 150) * 0.16 : W * 0.16;
+  const R = 36;
 
   // 軌道底
   ctx.fillStyle = "#eef1fa";
