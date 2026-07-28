@@ -1,0 +1,4 @@
+要用「真人數拍」當預備拍：
+- 錄一段「one, two, three, four」(字間留一點空隙)存成 count.wav/mp3/m4a 放這裡；
+- 或分四個檔 one.wav、two.wav、three.wav、four.wav。
+放好後重跑 tools/make_level*_music.py，會自動優先採用(勝過 edge-tts/say)。

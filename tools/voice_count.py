@@ -1,13 +1,21 @@
 #!/usr/bin/env python3
 """英文人聲數拍 one/two/three/four — 給各關音樂產生器的預備拍用。
 
-用 macOS 內建 TTS(`say`, 預設 Samantha 美式人聲)即時合成，去掉頭尾靜音
-(讓聲音正好落在拍點上)並正規化。各 make_levelN_music.py 匯入使用：
+三層產生鏈(2026-07-28 AI會議室會議定案，記錄/會議_20260728_1221.md)：
+    1) 真人錄音(最優先)：<專案>/sounds/voice/count.(wav|mp3|m4a|aiff) 整句自動切 4 字，
+       或 one/two/three/four.(wav|mp3|m4a|aiff) 逐字檔——放了檔案重跑產生器即自動採用
+    2) edge-tts 神經語音(en-US-AnaNeural 兒童女聲)：品質高；只在「產音檔時」上網，
+       遊戲本身仍離線
+    3) macOS say(Samantha) 後備：離線一定可用
 
+驗收標準(會議共識)：四個字等長、重音一致、可精準對齊拍點，而非單純擬真度。
+
+各 make_levelN_music.py 匯入使用：
     from voice_count import count_voices
     voices = count_voices(SR)          # [one, two, three, four] 的 numpy 波形
     add(k * 間隔, voices[k] * 0.6)
 """
+import glob
 import os
 import subprocess
 import tempfile
@@ -16,6 +24,10 @@ import wave
 import numpy as np
 
 WORDS = ["one", "two", "three", "four"]
+PROJ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+VOICE_DIR = os.path.join(PROJ, "sounds", "voice")
+EDGE_VOICE = "en-US-AnaNeural"  # 兒童女聲(有精神)
+EXTS = ("wav", "mp3", "m4a", "aiff")
 
 
 def _load_wav(path):
@@ -72,16 +84,86 @@ def _split_by_silence(x, sr):
     return [(a, b) for a, b in merged if b - a >= int(0.06 * sr)]
 
 
-def count_voices(sr=44100, voice="Samantha"):
-    """回傳 [one, two, three, four] 四段波形。
+def _decode(path, sr):
+    """任意音檔 → 單聲道 numpy(用 afconvert 轉 wav)。"""
+    fd, tmp = tempfile.mkstemp(suffix=".wav")
+    os.close(fd)
+    try:
+        subprocess.run(["afconvert", "-f", "WAVE", "-d", f"LEI16@{sr}", "-c", "1",
+                        path, tmp], check=True, capture_output=True)
+        return _load_wav(tmp)
+    finally:
+        os.remove(tmp)
 
-    整句合成「one, two, three, four!」(語氣自然、不會一字一頓的死板)，
-    前後墊靜音讓 one 的起音、four 的尾音都完整；再依靜音切成四個字，
-    切不出剛好四段才退回一個字一個字合成。
-    """
+
+def _find(basename):
+    for ext in EXTS:
+        hits = glob.glob(os.path.join(VOICE_DIR, f"{basename}.{ext}"))
+        if hits:
+            return hits[0]
+    return None
+
+
+def _from_recording(sr):
+    """第1層：使用者真人錄音。逐字檔優先，其次整句檔自動切4字。"""
+    words = [_find(w) for w in WORDS]
+    if all(words):
+        print("🎙 數拍人聲：使用真人錄音(逐字檔)")
+        return [_polish(_decode(p, sr), sr) for p in words]
+    phrase = _find("count")
+    if phrase:
+        x = _decode(phrase, sr)
+        segs = _split_by_silence(x, sr)
+        if len(segs) == 4:
+            print("🎙 數拍人聲：使用真人錄音(整句自動切4字)")
+            return [_polish(x[a:b], sr) for a, b in segs]
+        raise ValueError(f"count 錄音切出 {len(segs)} 段(需要4段，字間留點空隙再錄)")
+    return None
+
+
+def _from_edge_tts(sr):
+    """第2層：edge-tts 神經語音(僅產檔時上網)。"""
+    import asyncio
+
+    import edge_tts
+
+    fd, tmp = tempfile.mkstemp(suffix=".mp3")
+    os.close(fd)
+    try:
+        async def gen():
+            await edge_tts.Communicate("one! two! three! four!",
+                                       voice=EDGE_VOICE).save(tmp)
+        asyncio.run(gen())
+        x = _decode(tmp, sr)
+    finally:
+        os.remove(tmp)
+    segs = _split_by_silence(x, sr)
+    if len(segs) != 4:
+        raise ValueError(f"edge-tts 切出 {len(segs)} 段")
+    print(f"🗣 數拍人聲：edge-tts {EDGE_VOICE}")
+    return [_polish(x[a:b], sr) for a, b in segs]
+
+
+def _from_say_phrase(sr, voice="Samantha"):
+    """第3層：macOS say 後備(整句合成再切字，離線一定可用)。"""
     x = _say("[[slnc 400]] one, two, three, four! [[slnc 500]]", sr, voice)
     segs = _split_by_silence(x, sr)
     if len(segs) == 4:
+        print("🔈 數拍人聲：macOS say 後備")
         return [_polish(x[a:b], sr) for a, b in segs]
-    # 後備：逐字合成
     return [_polish(_say(w, sr, voice), sr) for w in WORDS]
+
+
+def count_voices(sr=44100, voice="Samantha"):
+    """回傳 [one, two, three, four] 四段波形(三層產生鏈，見檔頭)。"""
+    try:
+        rec = _from_recording(sr)
+        if rec:
+            return rec
+    except Exception as e:
+        print(f"⚠️ 真人錄音層失敗({e})，往下一層")
+    try:
+        return _from_edge_tts(sr)
+    except Exception as e:
+        print(f"⚠️ edge-tts 層失敗({e})，退回 say")
+    return _from_say_phrase(sr, voice)
