@@ -26,10 +26,16 @@ export class DrumListener {
 
   async start() {
     if (this.running) return;
+    // 預設走「語音處理」路徑(echoCancellation 開)：
+    // 1) 這台 Mac mini 的 Safari 用原始模式(全關)時，開麥克風會讓音樂播放抖動；
+    //    語音處理路徑=視訊通話同款、最多人走，實測穩定。
+    // 2) 回音消除會把喇叭放的音樂從麥克風訊號扣掉 → 音樂不易誤觸發打鼓判定。
+    // 想回原始模式：網址加 ?micmode=raw
+    const raw = new URLSearchParams(location.search).get("micmode") === "raw";
     const stream = await navigator.mediaDevices.getUserMedia({
       audio: {
-        echoCancellation: false,
-        noiseSuppression: false,
+        echoCancellation: !raw,
+        noiseSuppression: !raw,
         autoGainControl: false
       }
     });
