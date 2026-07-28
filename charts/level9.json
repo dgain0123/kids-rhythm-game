@@ -1,7 +1,7 @@
 {
-  "title": "第9關：跟著音樂打8下",
+  "title": "第9關：跟著音樂打9下",
   "bpm": 10.0,
-  "maxHits": 8,
+  "maxHits": 9,
   "notes": [
     {
       "type": "eighth",
@@ -42,6 +42,11 @@
       "type": "eighth",
       "drum": "snare",
       "beat": 3.5
+    },
+    {
+      "type": "eighth",
+      "drum": "snare",
+      "beat": 4.0
     }
   ],
   "hint": "聽音樂，跟著拍子打鼓！",

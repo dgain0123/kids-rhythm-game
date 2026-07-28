@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """合成第9關的背景音樂 → sounds/music/level9.m4a
 
-結構（總長約 37 秒，對齊 charts/level9.json）：
+結構（總長約 40 秒，對齊 charts/level9.json，9 個音符）：
     0–12s   預備拍：4 聲木魚聲(每 3 秒一聲，第 4 聲較高=「要開始了」)
-    12–36s  伴奏：8 小節 × 3 秒(和弦 C G Am F | C F G C)
+    12–39s  伴奏：9 小節 × 3 秒(和弦 C G Am F | C Am F G | C 結尾)
             每小節第一拍有較亮的鐘聲＝小朋友要打鼓的拍點
             ＋節拍器：八分音符(BPM 10 的半拍=每 3 秒)一聲木魚，
               跟預備拍同款、稍小聲 → 整首 3 秒脈動不間斷
-    36–37s  收尾淡出
+    39–40s  收尾淡出
 
 規矩：每個跟拍關卡的音樂都要含節拍器聲，細分每關可不同
 (第9關=eighth，記錄在 chart 的 metronome 欄位)。
@@ -28,8 +28,6 @@ import numpy as np
 SR = 44100
 LEAD_IN = 12.0      # 預備拍長度(秒)，= chart 的 leadInSec
 BAR = 3.0           # 一小節 3 秒(= BPM 10 的半拍，小朋友每小節打一下)
-BARS = 8
-TOTAL = LEAD_IN + BARS * BAR + 1.0
 
 # 音高(Hz)
 F = {
@@ -41,17 +39,21 @@ F = {
     "C6": 1046.50,
 }
 
-# 8 小節：和弦(pad 三音)、貝斯、拍點鐘聲、琶音(在 0.75/1.5/2.25 秒)
+# 9 小節(=9 個音符)：和弦(pad 三音)、貝斯、拍點鐘聲、琶音(在 0.75/1.5/2.25 秒)
+# 和聲：C G Am F | C Am F G | C(終止式收尾)
 PROG = [
     {"pad": ["C4", "E4", "G4"], "bass": "C2", "bell": "C6", "arp": ["E5", "G5", "E5"]},
     {"pad": ["B3", "D4", "G4"], "bass": "G2", "bell": "G5", "arp": ["D5", "B4", "D5"]},
     {"pad": ["A3", "C4", "E4"], "bass": "A2", "bell": "A5", "arp": ["C5", "E5", "C5"]},
     {"pad": ["A3", "C4", "F4"], "bass": "F2", "bell": "F5", "arp": ["C5", "A5", "C5"]},
     {"pad": ["C4", "E4", "G4"], "bass": "C2", "bell": "C6", "arp": ["G5", "E5", "G5"]},
+    {"pad": ["A3", "C4", "E4"], "bass": "A2", "bell": "A5", "arp": ["E5", "C5", "E5"]},
     {"pad": ["A3", "C4", "F4"], "bass": "F2", "bell": "F5", "arp": ["A5", "C5", "A5"]},
     {"pad": ["B3", "D4", "G4"], "bass": "G2", "bell": "G5", "arp": ["B4", "D5", "B4"]},
-    {"pad": ["C4", "E4", "G4"], "bass": "C2", "bell": "C6", "arp": ["E5", "C5", "C6"]},
+    {"pad": ["C4", "E4", "G4"], "bass": "C2", "bell": "C6", "arp": ["E5", "G5", "C6"]},
 ]
+BARS = len(PROG)
+TOTAL = LEAD_IN + BARS * BAR + 1.0
 
 buf = np.zeros(int(TOTAL * SR))
 
