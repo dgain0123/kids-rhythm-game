@@ -37,6 +37,7 @@ const els = {
 };
 
 let _peakMax = 0; // 記錄出現過的最大峰值，判斷麥克風到底有沒有收到聲音
+let _lastMeterT = 0, _lastMeterW = "", _lastDebugT = 0; // 音量條/診斷面板節流
 
 // 靈敏度滑桿(0=不靈敏, 1=很靈敏) → 觸發門檻(0.02=很好觸發, 0.5=很難觸發)
 // 往「很靈敏」拉 → 門檻變低 → 更容易被打鼓觸發
@@ -89,15 +90,18 @@ function startTimedLoop() {
   if (rafId) cancelAnimationFrame(rafId);
   const lead = chart.leadInSec ?? 0;
   const step = lead > 0 ? lead / 4 : 1; // 預備拍 4 聲
+  let frame = 0;
   const tick = () => {
     rafId = null;
     if (!game || !game.timed || !musicEl) return;
     if (game.state === "pass" || game.state === "fail") { els.countdown.hidden = true; return; }
+    frame++;
     const ct = musicEl.currentTime;
     const t = ct - lead;
     if (lead > 0 && ct < lead) {
       els.countdown.hidden = false;
-      els.countdown.textContent = Math.min(4, Math.floor(ct / step) + 1);
+      const num = String(Math.min(4, Math.floor(ct / step) + 1));
+      if (els.countdown.textContent !== num) els.countdown.textContent = num; // 數字沒變不動 DOM
     } else {
       if (!els.countdown.hidden) {
         els.countdown.hidden = true;
@@ -112,15 +116,18 @@ function startTimedLoop() {
       }
       if (act !== _activeIdx) { _activeIdx = act; redrawChart(); }
     }
-    // 太鼓軌道每一幀都重畫(角色一直在跑；倒數期間也先看得到角色跑進來)
-    drawLane(els.lane, {
-      t,
-      noteTimes: game.noteTimes,
-      hit: game.hitNotes,
-      tolSec: game.tolSec,
-      fx: laneFx,
-      sprite: laneSprite,
-    });
+    // 太鼓軌道重畫改 30fps(每兩幀畫一次)：減輕主執行緒負擔，
+    // 避免 Safari 音樂播放被卡頓切到；角色移動 30fps 視覺上一樣順
+    if (frame % 2 === 0) {
+      drawLane(els.lane, {
+        t,
+        noteTimes: game.noteTimes,
+        hit: game.hitNotes,
+        tolSec: game.tolSec,
+        fx: laneFx,
+        sprite: laneSprite,
+      });
+    }
     rafId = requestAnimationFrame(tick);
   };
   rafId = requestAnimationFrame(tick);
@@ -485,14 +492,25 @@ async function startGame() {
       listener = new DrumListener({
         // 跟拍模式要帶「譜面時間」，數下數模式帶 undefined 沒影響
         onHit: () => { if (game) game.registerHit(chartTimeNow()); },
+        // 音量回報每幀都來(60fps)，DOM 更新要節流：主執行緒太忙會讓
+        // Safari 的音樂播放出現卡頓(這台機器實測過，歡呼斷音同因)
         onLevel: (lv) => {
-          els.meterFill.style.width = Math.round(lv * 100) + "%";
           if (lv > _peakMax) _peakMax = lv;
-          els.debug.textContent =
-            `目前音量: ${lv.toFixed(3)}   出現過最大: ${_peakMax.toFixed(3)}\n` +
-            `音訊狀態: ${listener.audioCtx ? listener.audioCtx.state : "?"}   ` +
-            `取樣率: ${listener.audioCtx ? listener.audioCtx.sampleRate : "?"}\n` +
-            `麥克風: ${micInfo(listener)}`;
+          const now = performance.now();
+          if (now - _lastMeterT > 100) {
+            _lastMeterT = now;
+            const w = Math.round(lv * 100) + "%";
+            if (w !== _lastMeterW) { _lastMeterW = w; els.meterFill.style.width = w; }
+          }
+          // 診斷面板隱藏時完全不做(原本每幀組字串+查麥克風狀態，白耗)
+          if (!els.debug.hidden && now - _lastDebugT > 300) {
+            _lastDebugT = now;
+            els.debug.textContent =
+              `目前音量: ${lv.toFixed(3)}   出現過最大: ${_peakMax.toFixed(3)}\n` +
+              `音訊狀態: ${listener.audioCtx ? listener.audioCtx.state : "?"}   ` +
+              `取樣率: ${listener.audioCtx ? listener.audioCtx.sampleRate : "?"}\n` +
+              `麥克風: ${micInfo(listener)}`;
+          }
         }
       });
       listener.setThreshold(th);
