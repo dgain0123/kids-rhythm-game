@@ -5,7 +5,7 @@
 
 結構（總長 31.5 秒，對齊 charts/level11.json）：
     0–4s     預備拍：英文人聲數拍 one/two/three/four(每 1 秒一聲，
-             三層鏈:真人錄音>edge-tts AnaNeural>say，見 voice_count.py)，人聲單獨乾淨不疊其他聲
+             三層鏈:真人錄音>edge-tts Libby>say，見 voice_count.py)，人聲單獨乾淨不疊其他聲
     4–28s    伴奏：6 個和聲段 × 4 秒(C G Am F | C G)＋28s 終止 C 和弦收尾
              每 1 秒＝一個拍點：鐘聲走 根音(亮)→三音→五音→三音 的循環
              ＋節拍器：八分音符(每 1 秒)一聲木魚 → 整首 1 秒脈動不間斷

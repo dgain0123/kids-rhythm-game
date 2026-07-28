@@ -26,7 +26,7 @@ import numpy as np
 WORDS = ["one", "two", "three", "four"]
 PROJ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 VOICE_DIR = os.path.join(PROJ, "sounds", "voice")
-EDGE_VOICE = "en-US-AnaNeural"  # 兒童女聲(有精神)
+EDGE_VOICE = "en-GB-LibbyNeural"  # 英國年輕女聲(2026-07-28 使用者從4候選中選定)
 EXTS = ("wav", "mp3", "m4a", "aiff")
 
 
@@ -50,7 +50,7 @@ def _say(text, sr, voice):
 
 
 def _polish(x, sr):
-    """去頭尾靜音(保留緩衝) + 淡入淡出 + 峰值正規化。"""
+    """去頭尾靜音(保留緩衝) + 淡入淡出(不在這裡正規化，交給 _finalize 做整組響度對齊)。"""
     loud = np.where(np.abs(x) > 0.003)[0]
     if len(loud):
         a = max(0, loud[0] - int(0.04 * sr))
@@ -61,7 +61,17 @@ def _polish(x, sr):
     fo = min(len(x), int(0.12 * sr))
     x[:fi] *= np.linspace(0, 1, fi)
     x[-fo:] *= np.linspace(1, 0, fo)
-    return x / max(1e-9, float(np.max(np.abs(x))))
+    return x
+
+
+def _finalize(voices):
+    """四個字整組響度對齊：每個字的 RMS 拉到一致(中位數)，再整組把峰值調到 1。
+    避免「各字各自拉滿」造成音量忽大忽小的落差感。"""
+    rms = [max(1e-9, float(np.sqrt(np.mean(v ** 2)))) for v in voices]
+    target = float(np.median(rms))
+    voices = [v * (target / r) for v, r in zip(voices, rms)]
+    peak = max(1e-9, max(float(np.max(np.abs(v))) for v in voices))
+    return [v / peak for v in voices]
 
 
 def _split_by_silence(x, sr):
@@ -109,39 +119,39 @@ def _from_recording(sr):
     words = [_find(w) for w in WORDS]
     if all(words):
         print("🎙 數拍人聲：使用真人錄音(逐字檔)")
-        return [_polish(_decode(p, sr), sr) for p in words]
+        return _finalize([_polish(_decode(p, sr), sr) for p in words])
     phrase = _find("count")
     if phrase:
         x = _decode(phrase, sr)
         segs = _split_by_silence(x, sr)
         if len(segs) == 4:
             print("🎙 數拍人聲：使用真人錄音(整句自動切4字)")
-            return [_polish(x[a:b], sr) for a, b in segs]
+            return _finalize([_polish(x[a:b], sr) for a, b in segs])
         raise ValueError(f"count 錄音切出 {len(segs)} 段(需要4段，字間留點空隙再錄)")
     return None
 
 
 def _from_edge_tts(sr):
-    """第2層：edge-tts 神經語音(僅產檔時上網)。"""
+    """第2層：edge-tts 神經語音(僅產檔時上網)。
+    一個字一個字合成——每個字同樣語氣，不會有整句切字的音高/音量落差。"""
     import asyncio
 
     import edge_tts
 
-    fd, tmp = tempfile.mkstemp(suffix=".mp3")
-    os.close(fd)
-    try:
-        async def gen():
-            await edge_tts.Communicate("one! two! three! four!",
-                                       voice=EDGE_VOICE).save(tmp)
-        asyncio.run(gen())
-        x = _decode(tmp, sr)
-    finally:
-        os.remove(tmp)
-    segs = _split_by_silence(x, sr)
-    if len(segs) != 4:
-        raise ValueError(f"edge-tts 切出 {len(segs)} 段")
-    print(f"🗣 數拍人聲：edge-tts {EDGE_VOICE}")
-    return [_polish(x[a:b], sr) for a, b in segs]
+    async def gen_word(word, path):
+        await edge_tts.Communicate(word + "!", voice=EDGE_VOICE).save(path)
+
+    voices = []
+    for word in WORDS:
+        fd, tmp = tempfile.mkstemp(suffix=".mp3")
+        os.close(fd)
+        try:
+            asyncio.run(gen_word(word, tmp))
+            voices.append(_polish(_decode(tmp, sr), sr))
+        finally:
+            os.remove(tmp)
+    print(f"🗣 數拍人聲：edge-tts {EDGE_VOICE}(逐字合成+響度對齊)")
+    return _finalize(voices)
 
 
 def _from_say_phrase(sr, voice="Samantha"):
@@ -150,8 +160,8 @@ def _from_say_phrase(sr, voice="Samantha"):
     segs = _split_by_silence(x, sr)
     if len(segs) == 4:
         print("🔈 數拍人聲：macOS say 後備")
-        return [_polish(x[a:b], sr) for a, b in segs]
-    return [_polish(_say(w, sr, voice), sr) for w in WORDS]
+        return _finalize([_polish(x[a:b], sr) for a, b in segs])
+    return _finalize([_polish(_say(w, sr, voice), sr) for w in WORDS])
 
 
 def count_voices(sr=44100, voice="Samantha"):

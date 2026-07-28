@@ -3,7 +3,7 @@
 
 結構（總長約 40 秒，對齊 charts/level9.json，9 個音符）：
     0–12s   預備拍：英文人聲數拍 one/two/three/four(每 3 秒一聲，
-            三層鏈:真人錄音>edge-tts AnaNeural>say，見 voice_count.py)，人聲單獨乾淨不疊其他聲
+            三層鏈:真人錄音>edge-tts Libby>say，見 voice_count.py)，人聲單獨乾淨不疊其他聲
     12–39s  伴奏：9 小節 × 3 秒(和弦 C G Am F | C Am F G | C 結尾)
             每小節第一拍有較亮的鐘聲＝小朋友要打鼓的拍點
             ＋節拍器：八分音符(BPM 10 的半拍=每 3 秒)一聲木魚，
