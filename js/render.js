@@ -40,6 +40,17 @@ function drawBeam(ctx, x1, x2, yTop, s = 1) {
   ctx.fillRect(x1, yTop, x2 - x1, Math.max(4, 7 * s));
 }
 
+// 這份譜是否超過 4 小節(超過的話遊戲迴圈要每幀重畫，讓譜面跟著進度往左捲)
+export function needsScroll(notes) {
+  const list = Array.isArray(notes) ? notes : [notes];
+  const durOf = (t) => ({ whole: 4, half: 2, quarter: 1, eighth: 0.5, sixteenth: 0.25 }[t] ?? 1);
+  let acc = 0;
+  for (const nn of list) acc += durOf(nn.type);
+  const lastStart = acc - durOf(list[list.length - 1].type);
+  const barOf = (b) => Math.floor(b / 4 + 1e-6);
+  return lastStart + barOf(lastStart) * 0.9 > 4 * 4 + 3 * 0.9;
+}
+
 // 在 canvas 上畫五線譜 + 一排音符(quarter=四分、eighth=八分；相連八分自動加符樑)
 // state(選填)：{ hit: [true,false,...], active: 索引 }
 //   hit=true 的音符畫綠色(已打到)；active 的音符畫橘色+光圈(現在該打這個)
@@ -57,10 +68,23 @@ export function drawNotes(canvas, notes, state = {}) {
   // 超過一小節(4/4)就畫小節線隔開：跨小節處左右多留空間
   const BPB = 4, BAR_GAP = 0.9;
   const barOf = (b) => Math.floor(b / BPB + 1e-6);
-  const pos = starts.map((p) => p + barOf(p) * BAR_GAP);
-  const denom = Math.max(0.0001, pos[n - 1]);
+  const posOf = (b) => b + barOf(b) * BAR_GAP;
+  const pos = starts.map(posOf);
+  const total = Math.max(0.0001, pos[n - 1]);
 
-  // 音符大小固定(跟第9關一樣大)。放不下就把畫布加寬 → 譜面/頁面跟著變寬
+  // 譜面最多顯示 4 小節；更長的譜在遊戲中跟著進度往左捲動(state.curBeat=目前拍)
+  const MAX_BARS = 4;
+  const visible = MAX_BARS * BPB + (MAX_BARS - 1) * BAR_GAP;
+  const scrolling = total > visible;
+  let offset = 0;
+  if (scrolling) {
+    const cur = posOf(Math.max(0, state.curBeat ?? 0));
+    // 目前位置保持在視窗左邊 30% 處，開頭/結尾不捲出範圍
+    offset = Math.min(Math.max(0, cur - visible * 0.3), total - visible);
+  }
+  const denom = Math.min(total, visible);
+
+  // 音符大小固定(跟第9關一樣大)。放不下就把畫布加寬 → 譜面/頁面跟著變寬(上限=4小節寬)
   const BASE_W = 560, PPB = 64; // PPB=每拍畫幾px(第9關的密度)
   const W = Math.max(BASE_W, Math.round(denom * PPB + 150));
   if (canvas.width !== W) canvas.width = W;
@@ -95,13 +119,14 @@ export function drawNotes(canvas, notes, state = {}) {
   const cy = top + lineGap * 1.5;
   const xa = W > BASE_W ? 75 : W * 0.22;
   const xb = W > BASE_W ? W - 75 : W * 0.78;
-  const xs = pos.map((p) => (n === 1 ? W / 2 : xa + (xb - xa) * (p / denom)));
+  const xs = pos.map((p) => (n === 1 ? W / 2 : xa + (xb - xa) * ((p - offset) / denom)));
 
-  // 小節線(畫在跨小節的空隙正中間，貫穿五條線)
+  // 小節線(畫在跨小節的空隙正中間，貫穿五條線；捲動時跟著位移)
   ctx.strokeStyle = "#5b6b8c";
   ctx.lineWidth = 3;
   for (let b = 1; b <= barOf(starts[n - 1]); b++) {
-    const lx = xa + (xb - xa) * ((b * BPB + (b - 1) * BAR_GAP + BAR_GAP / 2) / denom);
+    const lx = xa + (xb - xa) * ((b * BPB + (b - 1) * BAR_GAP + BAR_GAP / 2 - offset) / denom);
+    if (lx < -10 || lx > W + 10) continue;
     ctx.beginPath();
     ctx.moveTo(lx, top);
     ctx.lineTo(lx, top + lineGap * 4);

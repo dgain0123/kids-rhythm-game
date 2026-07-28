@@ -1,7 +1,7 @@
 // main.js — 串接：載入譜 → 麥克風 → 遊戲邏輯 → 畫面
 import { DrumListener } from "./audio.js";
 import { Game } from "./game.js";
-import { drawNotes, drawLane, confetti } from "./render.js";
+import { drawNotes, drawLane, confetti, needsScroll } from "./render.js";
 import { initCharacters, showCharacter, setCharCount, getCurrentChar } from "./characters.js";
 
 // 關卡清單(依順序)。新增關卡就在 charts/ 加 levelN.json 並加進這裡
@@ -92,9 +92,17 @@ function stopMusic() {
     musicSrc = null;
   }
 }
-// 依判定狀態重畫譜面(打到=綠、當前拍點=橘)
+// 依判定狀態重畫譜面(打到=綠、當前拍點=橘；超過4小節的譜帶目前拍數→往左捲動)
 function redrawChart() {
-  const state = game && game.timed ? { hit: game.hitNotes, active: _activeIdx } : {};
+  let state = {};
+  if (game && game.timed) {
+    const t = chartTimeNow();
+    state = {
+      hit: game.hitNotes,
+      active: _activeIdx,
+      curBeat: typeof t === "number" ? t * chart.bpm / 60 : 0,
+    };
+  }
   drawNotes(els.noteCanvas, chart.notes, state);
 }
 // 倒數 + 拍點高亮迴圈：全部以音樂播放時間為準(單一時鐘，不會漂移)
@@ -104,6 +112,7 @@ function startTimedLoop() {
   const pre = chart.preRollSec ?? 0; // 音檔開頭的靜音緩衝(躲播放起頭暫態)，還沒開始數
   const step = lead > pre ? (lead - pre) / 4 : 1; // 預備拍 4 聲
   let frame = 0;
+  const scrolls = needsScroll(chart.notes); // 超過4小節→譜面每幀跟著捲
   const tick = () => {
     rafId = null;
     if (!game || !game.timed || !musicSrc) return;
@@ -131,7 +140,8 @@ function startTimedLoop() {
         const err = Math.abs(t - game.noteTimes[i]);
         if (err <= game.tolSec * 0.6 && err < best) { best = err; act = i; }
       }
-      if (act !== _activeIdx) { _activeIdx = act; redrawChart(); }
+      if (act !== _activeIdx) { _activeIdx = act; if (!scrolls) redrawChart(); }
+      if (scrolls && frame % 2 === 1) redrawChart(); // 捲動譜面(30fps，跟軌道錯開幀)
     }
     // 太鼓軌道重畫改 30fps(每兩幀畫一次)：減輕主執行緒負擔，
     // 避免 Safari 音樂播放被卡頓切到；角色移動 30fps 視覺上一樣順
