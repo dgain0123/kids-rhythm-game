@@ -507,6 +507,7 @@ async function startGame() {
     if (!listener) {
       // 第一次：開麥克風。之後整場重用同一個，不再每輪開開關關
       listener = new DrumListener({
+        ctx: getCtx(), // 跟音樂共用同一個 AudioContext：一條音訊管線，減少裝置抖動/卡頓
         // 跟拍模式要帶「譜面時間」，數下數模式帶 undefined 沒影響
         onHit: () => { if (game) game.registerHit(chartTimeNow()); },
         // 音量回報每幀都來(60fps)，DOM 更新要節流：主執行緒太忙會讓

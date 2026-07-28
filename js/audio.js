@@ -3,10 +3,11 @@
 //       視為打了一下鼓。用不反應期(refractory)避免一下被算成很多下。
 
 export class DrumListener {
-  constructor({ onHit, onLevel } = {}) {
+  constructor({ onHit, onLevel, ctx } = {}) {
     this.onHit = onHit || (() => {});        // 偵測到一下鼓時呼叫
     this.onLevel = onLevel || (() => {});    // 每一幀回報目前音量(0~1)，給音量條用
-    this.audioCtx = null;
+    this.audioCtx = ctx || null;             // 可傳入共用的 AudioContext(麥克風+音樂同一條管線,減少裝置抖動)
+    this._ownCtx = !ctx;                     // 自己開的才在 stop() 時關掉
     this.analyser = null;
     this.data = null;
     this.running = false;
@@ -32,7 +33,7 @@ export class DrumListener {
         autoGainControl: false
       }
     });
-    this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (!this.audioCtx) this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     const source = this.audioCtx.createMediaStreamSource(stream);
     this.analyser = this.audioCtx.createAnalyser();
     this.analyser.fftSize = 1024;
@@ -114,7 +115,7 @@ export class DrumListener {
   stop() {
     this.running = false;
     if (this.stream) this.stream.getTracks().forEach(t => t.stop());
-    if (this.audioCtx) this.audioCtx.close();
+    if (this.audioCtx && this._ownCtx) this.audioCtx.close(); // 共用的 ctx 不能關(音樂還要用)
     this.audioCtx = null;
     this.analyser = null;
     this.stream = null;
