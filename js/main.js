@@ -53,7 +53,11 @@ let game = null;
 let chart = null;
 
 // ── 跟拍關卡(chart 有 bpm/beat/music)的音樂與畫面同步 ──
-let musicEl = null;   // 背景音樂 <audio>(blob 整包載入，離線也能播)
+// 音樂用 Web Audio buffer 播：在獨立音訊執行緒渲染，主執行緒卡頓也不會
+// 讓音樂斷斷續續(<audio> 元素在這台 Safari 會被頁面忙碌切到，實測)
+let musicBuf = null;  // 解碼好的 AudioBuffer
+let musicSrc = null;  // 播放中的 BufferSource(null=沒在播)
+let musicT0 = 0;      // 在 AudioContext 時間軸上的開始時刻
 let rafId = null;     // 倒數/拍點高亮的 rAF 迴圈
 let _activeIdx = -1;  // 目前該打的音符索引(畫橘色高亮用)
 let laneSprite = { image: null, emoji: "🥁" }; // 太鼓軌道上跑的圖示(=目前角色)
@@ -68,9 +72,13 @@ function showLane(on) {
 function isTimedChart(c) {
   return !!(c && c.bpm && Array.isArray(c.notes) && c.notes.length && c.notes[0].beat != null);
 }
+// 音樂目前播到第幾秒(以 AudioContext 的時鐘為準，唯一時鐘)
+function musicNow() {
+  return musicSrc && audioCtx ? audioCtx.currentTime - musicT0 : 0;
+}
 // 譜面時間 = 音樂播放時間 - 預備拍長度(音樂檔前面有預備拍)
 function chartTimeNow() {
-  return musicEl ? musicEl.currentTime - (chart.leadInSec ?? 0) : undefined;
+  return musicSrc ? musicNow() - (chart.leadInSec ?? 0) : undefined;
 }
 function stopMusic() {
   if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
@@ -78,7 +86,11 @@ function stopMusic() {
   _activeIdx = -1;
   laneFx = [];
   showLane(false);
-  if (musicEl) { try { musicEl.pause(); musicEl.currentTime = 0; } catch (e) {} }
+  if (musicSrc) {
+    musicSrc.onended = null; // 手動停止不要觸發「歌放完」判定
+    try { musicSrc.stop(); } catch (e) {}
+    musicSrc = null;
+  }
 }
 // 依判定狀態重畫譜面(打到=綠、當前拍點=橘)
 function redrawChart() {
@@ -93,10 +105,10 @@ function startTimedLoop() {
   let frame = 0;
   const tick = () => {
     rafId = null;
-    if (!game || !game.timed || !musicEl) return;
+    if (!game || !game.timed || !musicSrc) return;
     if (game.state === "pass" || game.state === "fail") { els.countdown.hidden = true; return; }
     frame++;
-    const ct = musicEl.currentTime;
+    const ct = musicNow();
     const t = ct - lead;
     if (lead > 0 && ct < lead) {
       els.countdown.hidden = false;
@@ -154,12 +166,13 @@ async function goToLevel(idx) {
   if (isTimedChart(chart)) setCharCount(1, { numbers: false });
   else setCharCount(chart.maxHits);
   showCharacter();
-  musicEl = null;
+  musicBuf = null;
   if (chart.music) {
-    try { musicEl = await loadAudioEl(chart.music); }
-    catch (e) { musicEl = new Audio(chart.music); } // 載不進 blob 就退回串流播放
-    // 音樂放完＝這一輪結束：還有沒打到的音符就算失敗
-    musicEl.addEventListener("ended", () => { if (game) game.finishSong(); });
+    // 整包抓下來解碼成 AudioBuffer(離線時由 SW 快取供檔)
+    try {
+      const res = await fetch(chart.music);
+      musicBuf = await getCtx().decodeAudioData(await res.arrayBuffer());
+    } catch (e) { musicBuf = null; }
   }
 }
 
@@ -550,7 +563,7 @@ async function startGame() {
   game.start();
 
   // 跟拍關卡：開始播音樂(內含預備拍) + 倒數/太鼓軌道迴圈
-  if (isTimedChart(chart) && musicEl) {
+  if (isTimedChart(chart) && musicBuf) {
     _activeIdx = -1;
     laneFx = [];
     // 軌道上跑的圖示＝目前選的角色(圖片先載好；emoji 角色直接畫字)
@@ -562,11 +575,15 @@ async function startGame() {
       laneSprite.image = im;
     }
     showLane(true);
-    try {
-      musicEl.currentTime = 0;
-      const p = musicEl.play();
-      if (p && p.catch) p.catch(() => {});
-    } catch (e) {}
+    // Web Audio buffer 播放：音訊執行緒渲染，不受主執行緒卡頓影響
+    const ctx = getCtx();
+    musicSrc = ctx.createBufferSource();
+    musicSrc.buffer = musicBuf;
+    musicSrc.connect(ctx.destination);
+    // 音樂放完＝這一輪結束：還有沒打到的音符就算失敗
+    musicSrc.onended = () => { musicSrc = null; if (game) game.finishSong(); };
+    musicT0 = ctx.currentTime;
+    musicSrc.start();
     els.status.textContent = "預備～聽拍子！";
     startTimedLoop();
   }
