@@ -9,13 +9,15 @@ import mid2json  # noqa: E402
 
 
 def _make_midi(events, bpm=120, is_drum=True):
-    """events: [(beat, pitch)]，回傳寫好的暫存 MIDI 路徑。"""
+    """events: [(beat, pitch)] 或 [(beat, pitch, dur_beats)]，回傳寫好的暫存 MIDI 路徑。"""
     pm = pretty_midi.PrettyMIDI(initial_tempo=bpm)
     drum = pretty_midi.Instrument(program=0, is_drum=is_drum, name="Drums")
     sec_per_beat = 60.0 / bpm
-    for beat, pitch in events:
+    for ev in events:
+        beat, pitch = ev[0], ev[1]
+        dur = ev[2] * sec_per_beat if len(ev) > 2 else 0.05
         t = beat * sec_per_beat
-        drum.notes.append(pretty_midi.Note(velocity=100, pitch=pitch, start=t, end=t + 0.05))
+        drum.notes.append(pretty_midi.Note(velocity=100, pitch=pitch, start=t, end=t + dur))
     pm.instruments.append(drum)
     path = os.path.join(os.path.dirname(__file__), "_tmp_test.mid")
     pm.write(path)
@@ -102,6 +104,20 @@ def test_tolerance_music_leadin_fields():
         assert "music" not in plain
         assert "leadInSec" not in plain
         assert "metronome" not in plain
+    finally:
+        os.remove(path)
+
+
+def test_last_note_type_from_duration():
+    """最後一顆音符：有實際長度就用長度判時值(第9關=8個八分+結尾1個四分)；
+    長度太短(斷奏輸入)才沿用前一個間隔。"""
+    # 8 個八分(每 0.5 拍) + 最後一顆在 beat 4.0、長度 1 拍 → quarter
+    events = [(i * 0.5, 38, 0.49) for i in range(8)] + [(4.0, 38, 1.0)]
+    path = _make_midi(events, bpm=10, is_drum=False)
+    try:
+        chart = mid2json.convert(path)
+        types = [n["type"] for n in chart["notes"]]
+        assert types == ["eighth"] * 8 + ["quarter"]
     finally:
         os.remove(path)
 

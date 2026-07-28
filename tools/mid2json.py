@@ -71,7 +71,8 @@ def collect_hits(pm: pretty_midi.PrettyMIDI):
         out = []
         for inst in insts:
             for n in inst.notes:
-                out.append((float(n.start), pm.time_to_tick(n.start), int(n.pitch)))
+                dur_ticks = pm.time_to_tick(n.end) - pm.time_to_tick(n.start)
+                out.append((float(n.start), pm.time_to_tick(n.start), int(n.pitch), dur_ticks))
         return out
 
     hits = gather(i for i in pm.instruments if i.is_drum)
@@ -99,13 +100,14 @@ def convert(midi_path, title=None, hint=None, only=None, bars=None,
     tick0 = hits[0][1]
 
     notes = []
-    for time_s, tick, pitch in hits:
+    for time_s, tick, pitch, dur_ticks in hits:
         drum = GM_TO_DRUM.get(pitch, "other")
         if only and drum not in only:
             continue
         beat = (tick - tick0) / resolution
         notes.append({"drum": drum, "beat": round(beat, 3),
-                      "time": round(time_s - t0, 3), "pitch": pitch})
+                      "time": round(time_s - t0, 3), "pitch": pitch,
+                      "dur_beats": dur_ticks / resolution})
 
     # 同一時間點多鼓件(和音)只留第一個，避免幼兒版重複
     if dedup_ms and dedup_ms > 0:
@@ -124,13 +126,17 @@ def convert(midi_path, title=None, hint=None, only=None, bars=None,
         notes = [n for n in notes if n["beat"] < limit]
 
     # 依「到下一下的間隔」決定每個音符的時值(quarter/eighth…)
+    # 最後一下沒有下一下可算：優先用 MIDI 音符的實際長度(Logic 裡畫多長就是多長)，
+    # 長度太短(斷奏式輸入)才沿用前一個間隔
     for i, n in enumerate(notes):
         if i + 1 < len(notes):
             ioi = notes[i + 1]["beat"] - n["beat"]
+        elif n["dur_beats"] >= 0.2:
+            ioi = n["dur_beats"]
         elif i > 0:
-            ioi = n["beat"] - notes[i - 1]["beat"]  # 最後一下沿用前一個間隔
+            ioi = n["beat"] - notes[i - 1]["beat"]
         else:
-            ioi = 1.0  # 只有一個音符時預設四分音符
+            ioi = 1.0  # 只有一個很短的音符時預設四分音符
         n["type"] = snap_note_type(ioi)
 
     if not notes:

@@ -71,12 +71,26 @@ export function drawNotes(canvas, notes, state = {}) {
   const x0 = W * 0.22, x1 = W * 0.78;
 
   // 依「拍」定位：四分=1拍、八分=半拍 → 每拍等寬(兩個八分＝一拍＝一組)
-  const durOf = t => (t === "eighth" ? 0.5 : 1);
+  const durOf = t => ({ whole: 4, half: 2, quarter: 1, eighth: 0.5, sixteenth: 0.25 }[t] ?? 1);
   const starts = []; let acc = 0;
   for (let i = 0; i < n; i++) { starts.push(acc); acc += durOf(list[i].type); }
-  const denom = Math.max(0.0001, acc - durOf(list[n - 1].type));
-  const xs = [];
-  for (let i = 0; i < n; i++) xs.push(n === 1 ? W / 2 : x0 + (x1 - x0) * (starts[i] / denom));
+  // 超過一小節(4/4)就畫小節線隔開：跨小節處左右多留空間
+  const BPB = 4, BAR_GAP = 0.9;
+  const barOf = (b) => Math.floor(b / BPB + 1e-6);
+  const pos = starts.map((s) => s + barOf(s) * BAR_GAP);
+  const denom = Math.max(0.0001, pos[n - 1]);
+  const xs = pos.map((p) => (n === 1 ? W / 2 : x0 + (x1 - x0) * (p / denom)));
+
+  // 小節線(畫在跨小節的空隙正中間，貫穿五條線)
+  ctx.strokeStyle = "#5b6b8c";
+  ctx.lineWidth = 3;
+  for (let b = 1; b <= barOf(starts[n - 1]); b++) {
+    const lx = x0 + (x1 - x0) * ((b * BPB + (b - 1) * BAR_GAP + BAR_GAP / 2) / denom);
+    ctx.beginPath();
+    ctx.moveTo(lx, top);
+    ctx.lineTo(lx, top + lineGap * 4);
+    ctx.stroke();
+  }
 
   // 先畫所有符頭 + 符桿(當前拍點加一圈光暈)
   for (let i = 0; i < n; i++) {
@@ -90,12 +104,13 @@ export function drawNotes(canvas, notes, state = {}) {
     drawStem(ctx, xs[i], cy, colorOf(i));
   }
 
-  // 八分音符：每「兩個一組」(一拍)打符樑，組跟組分開；落單的畫旗子
+  // 八分音符：每「兩個一組」(一拍)打符樑，組跟組分開；落單的畫旗子(不跨小節連樑)
   const yTop = cy - STEM_LEN;
   let i = 0;
   while (i < n) {
     if (list[i].type === "eighth") {
-      if (i + 1 < n && list[i + 1].type === "eighth") {
+      if (i + 1 < n && list[i + 1].type === "eighth"
+          && barOf(starts[i]) === barOf(starts[i + 1])) {
         drawBeam(ctx, xs[i] + STEM_DX, xs[i + 1] + STEM_DX, yTop); // 兩個一組
         i += 2;
       } else { drawFlag(ctx, xs[i], cy); i += 1; }
