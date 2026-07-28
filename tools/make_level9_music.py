@@ -2,7 +2,8 @@
 """合成第9關的背景音樂 → sounds/music/level9.m4a
 
 結構（總長約 40 秒，對齊 charts/level9.json，9 個音符）：
-    0–12s   預備拍：4 聲木魚聲(每 3 秒一聲，第 4 聲較高=「要開始了」)
+    0–12s   預備拍：英文人聲數拍 one/two/three/four(每 3 秒一聲，
+            macOS say/Samantha 合成)＋每聲底下墊小聲節拍器木魚
     12–39s  伴奏：9 小節 × 3 秒(和弦 C G Am F | C Am F G | C 結尾)
             每小節第一拍有較亮的鐘聲＝小朋友要打鼓的拍點
             ＋節拍器：八分音符(BPM 10 的半拍=每 3 秒)一聲木魚，
@@ -24,6 +25,8 @@ import sys
 import wave
 
 import numpy as np
+
+from voice_count import count_voices
 
 SR = 44100
 LEAD_IN = 12.0      # 預備拍長度(秒)，= chart 的 leadInSec
@@ -115,9 +118,11 @@ def click(t0, freq=1100, vol=0.45):
 
 
 def main():
-    # 預備拍：1、2、3 同音，4 較高(提示要開始了)
+    # 預備拍：英文人聲數拍 one/two/three/four，底下墊小聲節拍器(脈動不中斷)
+    voices = count_voices(SR)
     for k in range(4):
-        click(k * BAR, freq=1400 if k == 3 else 1100)
+        click(k * BAR, vol=0.25)
+        add(k * BAR, voices[k] * 0.6)
 
     # 8 小節伴奏
     for b, bar in enumerate(PROG):

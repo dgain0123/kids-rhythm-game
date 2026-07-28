@@ -4,7 +4,8 @@
 第11關：BPM 30(第9關三倍速)、小朋友每 1 秒打一下、共 25 下。
 
 結構（總長 31.5 秒，對齊 charts/level11.json）：
-    0–4s     預備拍：4 聲木魚聲(每 1 秒一聲，第 4 聲較高=「要開始了」)
+    0–4s     預備拍：英文人聲數拍 one/two/three/four(每 1 秒一聲，
+             macOS say/Samantha 合成)＋每聲底下墊小聲節拍器木魚
     4–28s    伴奏：6 個和聲段 × 4 秒(C G Am F | C G)＋28s 終止 C 和弦收尾
              每 1 秒＝一個拍點：鐘聲走 根音(亮)→三音→五音→三音 的循環
              ＋節拍器：八分音符(每 1 秒)一聲木魚 → 整首 1 秒脈動不間斷
@@ -22,6 +23,8 @@ import sys
 import wave
 
 import numpy as np
+
+from voice_count import count_voices
 
 SR = 44100
 HIT = 1.0           # 小朋友的拍點間隔(= BPM 30 的半拍)
@@ -105,9 +108,11 @@ def click(t0, freq=1100, vol=0.45):
 
 
 def main():
-    # 預備拍：1、2、3 同音，4 較高(要開始了)
+    # 預備拍：英文人聲數拍 one/two/three/four，底下墊小聲節拍器(脈動不中斷)
+    voices = count_voices(SR)
     for k in range(4):
-        click(k * HIT, freq=1400 if k == 3 else 1100)
+        click(k * HIT, vol=0.25)
+        add(k * HIT, voices[k] * 0.6)
 
     # 6 個和聲段 × 4 拍點
     for g, seg in enumerate(PROG):
