@@ -172,7 +172,7 @@
   "hint": "跟著拍子打鼓！",
   "toleranceBeats": 0.5,
   "music": "./sounds/music/level17.m4a",
-  "leadInSec": 2.333333,
+  "leadInSec": 3.666667,
   "metronome": "eighth",
   "preRollSec": 1.0
 }

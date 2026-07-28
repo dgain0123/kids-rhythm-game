@@ -5,7 +5,7 @@
 
 結構（總長 22.5 秒，對齊 charts/level14.json）：
     0–1s     開頭靜音緩衝(preRollSec，躲播放起頭暫態)
-    1–3s     預備拍：英文人聲數拍 one/two/three/four(每 0.5 秒一聲，
+    1–3s     預備拍：英文人聲數拍 one/two/three/four(每一拍=四分音符一聲，
              三層鏈:真人錄音>edge-tts Libby>say，見 voice_count.py)
     3–19s    伴奏：8 個和聲段 × 2 秒(C G Am F | C Am F G)＋19s 終止 C 和弦
              每 0.5 秒＝一個拍點：鐘聲走 根音(亮)→三音→五音→三音 循環
@@ -28,7 +28,8 @@ from voice_count import count_voices
 SR = 44100
 HIT = 0.5           # 小朋友的拍點間隔(= BPM 60 的半拍)
 PRE = 1.0           # 開頭靜音緩衝(躲播放起頭暫態；= chart 的 preRollSec)
-LEAD_IN = PRE + 4 * HIT  # 預備拍總長 3 秒(= chart 的 leadInSec)
+COUNT = 2 * HIT     # 數拍間隔=四分音符(一拍)——速度60起八分數拍太趕(2026-07-28規矩)
+LEAD_IN = PRE + 4 * COUNT  # 預備拍總長 3 秒(= chart 的 leadInSec)
 SEG = 4 * HIT       # 一個和聲段 2 秒(4 個拍點換一個和弦)
 
 F = {
@@ -112,7 +113,7 @@ def click(t0, freq=1100, vol=0.45):
 def main():
     # 預備拍：英文人聲數拍 one/two/three/four(不修剪，起音點對齊拍點)
     for k, (v, on) in enumerate(count_voices(SR)):
-        add(PRE + k * HIT - on, v * 0.6)
+        add(PRE + k * COUNT - on, v * 0.6)
 
     # 8 個和聲段 × 4 拍點
     for g, seg in enumerate(PROG):
