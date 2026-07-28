@@ -1,0 +1,178 @@
+{
+  "title": "第16關：速度80",
+  "bpm": 80.0,
+  "maxHits": 33,
+  "notes": [
+    {
+      "type": "eighth",
+      "drum": "snare",
+      "beat": 0.0
+    },
+    {
+      "type": "eighth",
+      "drum": "snare",
+      "beat": 0.5
+    },
+    {
+      "type": "eighth",
+      "drum": "snare",
+      "beat": 1.0
+    },
+    {
+      "type": "eighth",
+      "drum": "snare",
+      "beat": 1.5
+    },
+    {
+      "type": "eighth",
+      "drum": "snare",
+      "beat": 2.0
+    },
+    {
+      "type": "eighth",
+      "drum": "snare",
+      "beat": 2.5
+    },
+    {
+      "type": "eighth",
+      "drum": "snare",
+      "beat": 3.0
+    },
+    {
+      "type": "eighth",
+      "drum": "snare",
+      "beat": 3.5
+    },
+    {
+      "type": "eighth",
+      "drum": "snare",
+      "beat": 4.0
+    },
+    {
+      "type": "eighth",
+      "drum": "snare",
+      "beat": 4.5
+    },
+    {
+      "type": "eighth",
+      "drum": "snare",
+      "beat": 5.0
+    },
+    {
+      "type": "eighth",
+      "drum": "snare",
+      "beat": 5.5
+    },
+    {
+      "type": "eighth",
+      "drum": "snare",
+      "beat": 6.0
+    },
+    {
+      "type": "eighth",
+      "drum": "snare",
+      "beat": 6.5
+    },
+    {
+      "type": "eighth",
+      "drum": "snare",
+      "beat": 7.0
+    },
+    {
+      "type": "eighth",
+      "drum": "snare",
+      "beat": 7.5
+    },
+    {
+      "type": "eighth",
+      "drum": "snare",
+      "beat": 8.0
+    },
+    {
+      "type": "eighth",
+      "drum": "snare",
+      "beat": 8.5
+    },
+    {
+      "type": "eighth",
+      "drum": "snare",
+      "beat": 9.0
+    },
+    {
+      "type": "eighth",
+      "drum": "snare",
+      "beat": 9.5
+    },
+    {
+      "type": "eighth",
+      "drum": "snare",
+      "beat": 10.0
+    },
+    {
+      "type": "eighth",
+      "drum": "snare",
+      "beat": 10.5
+    },
+    {
+      "type": "eighth",
+      "drum": "snare",
+      "beat": 11.0
+    },
+    {
+      "type": "eighth",
+      "drum": "snare",
+      "beat": 11.5
+    },
+    {
+      "type": "eighth",
+      "drum": "snare",
+      "beat": 12.0
+    },
+    {
+      "type": "eighth",
+      "drum": "snare",
+      "beat": 12.5
+    },
+    {
+      "type": "eighth",
+      "drum": "snare",
+      "beat": 13.0
+    },
+    {
+      "type": "eighth",
+      "drum": "snare",
+      "beat": 13.5
+    },
+    {
+      "type": "eighth",
+      "drum": "snare",
+      "beat": 14.0
+    },
+    {
+      "type": "eighth",
+      "drum": "snare",
+      "beat": 14.5
+    },
+    {
+      "type": "eighth",
+      "drum": "snare",
+      "beat": 15.0
+    },
+    {
+      "type": "eighth",
+      "drum": "snare",
+      "beat": 15.5
+    },
+    {
+      "type": "quarter",
+      "drum": "snare",
+      "beat": 16.0
+    }
+  ],
+  "hint": "跟著拍子打鼓！",
+  "toleranceBeats": 0.5,
+  "music": "./sounds/music/level16.m4a",
+  "leadInSec": 2.5,
+  "metronome": "eighth",
+  "preRollSec": 1.0
+}
