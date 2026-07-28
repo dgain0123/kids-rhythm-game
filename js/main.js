@@ -203,7 +203,10 @@ async function selectLevel(idx) {
   els.start.textContent = "開始遊戲";
   els.retry.hidden = true;
   els.next.hidden = true;
-  els.status.textContent = `準備好了！打${chart.maxHits}下鼓～`;
+  // 跟拍關卡不顯示打幾下(看譜跟音樂就好)；數下數關卡照舊提示
+  els.status.textContent = isTimedChart(chart)
+    ? "準備好了！跟著音樂打鼓～"
+    : `準備好了！打${chart.maxHits}下鼓～`;
 }
 
 function onState(state, info) {
@@ -215,7 +218,9 @@ function onState(state, info) {
       showCharacter(); // 還原成目前選的角色
       els.winBanner.hidden = true;
       els.next.hidden = true;
-      els.status.textContent = `準備好了！打${info.maxHits}下鼓～`;
+      els.status.textContent = info.timed
+        ? "準備好了！跟著音樂打鼓～"
+        : `準備好了！打${info.maxHits}下鼓～`;
       break;
     case "progress":
       els.status.textContent = "";
