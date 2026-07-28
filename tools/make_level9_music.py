@@ -3,7 +3,7 @@
 
 結構（總長約 40 秒，對齊 charts/level9.json，9 個音符）：
     0–12s   預備拍：英文人聲數拍 one/two/three/four(每 3 秒一聲，
-            macOS say/Samantha 合成)＋每聲底下墊小聲節拍器木魚
+            macOS say/Samantha 合成)，人聲單獨乾淨不疊其他聲
     12–39s  伴奏：9 小節 × 3 秒(和弦 C G Am F | C Am F G | C 結尾)
             每小節第一拍有較亮的鐘聲＝小朋友要打鼓的拍點
             ＋節拍器：八分音符(BPM 10 的半拍=每 3 秒)一聲木魚，
@@ -118,10 +118,9 @@ def click(t0, freq=1100, vol=0.45):
 
 
 def main():
-    # 預備拍：英文人聲數拍 one/two/three/four，底下墊小聲節拍器(脈動不中斷)
+    # 預備拍：英文人聲數拍 one/two/three/four(不疊其他聲音，人聲乾淨)
     voices = count_voices(SR)
     for k in range(4):
-        click(k * BAR, vol=0.25)
         add(k * BAR, voices[k] * 0.6)
 
     # 8 小節伴奏

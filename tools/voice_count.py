@@ -39,14 +39,14 @@ def _say(text, sr, voice):
 
 def _polish(x, sr):
     """去頭尾靜音(保留緩衝) + 淡入淡出 + 峰值正規化。"""
-    loud = np.where(np.abs(x) > 0.005)[0]
+    loud = np.where(np.abs(x) > 0.003)[0]
     if len(loud):
-        a = max(0, loud[0] - int(0.02 * sr))
-        b = min(len(x), loud[-1] + 1 + int(0.10 * sr))
+        a = max(0, loud[0] - int(0.04 * sr))
+        b = min(len(x), loud[-1] + 1 + int(0.18 * sr))
         x = x[a:b]
     x = x.copy()
-    fi = min(len(x), int(0.008 * sr))
-    fo = min(len(x), int(0.08 * sr))
+    fi = min(len(x), int(0.005 * sr))
+    fo = min(len(x), int(0.12 * sr))
     x[:fi] *= np.linspace(0, 1, fi)
     x[-fo:] *= np.linspace(1, 0, fo)
     return x / max(1e-9, float(np.max(np.abs(x))))
@@ -56,7 +56,7 @@ def _split_by_silence(x, sr):
     """依靜音把整句切成字：音量包絡 > 門檻的連續區段(合併小空隙、丟太短的)。"""
     win = int(0.02 * sr)
     env = np.convolve(np.abs(x), np.ones(win) / win, mode="same")
-    mask = env > 0.01
+    mask = env > 0.006
     # 找連續 True 區段
     edges = np.flatnonzero(np.diff(mask.astype(int)))
     idx = np.concatenate(([0], edges + 1, [len(x)]))
@@ -76,9 +76,10 @@ def count_voices(sr=44100, voice="Samantha"):
     """回傳 [one, two, three, four] 四段波形。
 
     整句合成「one, two, three, four!」(語氣自然、不會一字一頓的死板)，
-    再依靜音切成四個字；切不出剛好四段才退回一個字一個字合成。
+    前後墊靜音讓 one 的起音、four 的尾音都完整；再依靜音切成四個字，
+    切不出剛好四段才退回一個字一個字合成。
     """
-    x = _say("one, two, three, four!", sr, voice)
+    x = _say("[[slnc 400]] one, two, three, four! [[slnc 500]]", sr, voice)
     segs = _split_by_silence(x, sr)
     if len(segs) == 4:
         return [_polish(x[a:b], sr) for a, b in segs]
