@@ -285,6 +285,10 @@ button:disabled { opacity: .6; cursor: default; }
   line-height: 1;
 }
 .level-card .lv-name { font-size: 15px; font-weight: 800; color: #5b6b8c; text-align: center; }
+/* 大關卡(章節)卡片：橫向大卡 */
+.group-card { width: min(86vw, 340px); min-height: 96px; flex-direction: row; gap: 14px; }
+.group-card .lv-name { font-size: 20px; }
+#backToGroups { margin: 0 auto 14px; display: block; }
 
 .mini-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
 

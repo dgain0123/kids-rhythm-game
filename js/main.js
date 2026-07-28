@@ -4,9 +4,30 @@ import { Game } from "./game.js";
 import { drawNotes, drawLane, confetti, needsScroll } from "./render.js";
 import { initCharacters, showCharacter, setCharCount, getCurrentChar } from "./characters.js";
 
-// 關卡清單(依順序)。新增關卡就在 charts/ 加 levelN.json 並加進這裡
-const LEVELS = ["level1", "level2", "level3", "level4", "level5", "level6", "level7", "level8", "level9", "level10", "level11", "level12", "level13", "level14", "level15", "level16", "level17", "level18"];
+// 大關卡(章節)：把小關卡收在一起。之後加新章節就在這裡加一組
+// {title: 章節名, levels: [小關卡...]}；「下一關」只在同章節內接續
+const GROUPS = [
+  {
+    title: "第一行第一小節",
+    levels: ["level1", "level2", "level3", "level4", "level5", "level6", "level7", "level8",
+             "level9", "level10", "level11", "level12", "level13", "level14", "level15",
+             "level16", "level17", "level18"],
+  },
+];
+const LEVELS = GROUPS.flatMap((g) => g.levels);
 let levelIdx = 0;
+
+// 某個全域關卡索引屬於哪個大關卡 / 大關卡的起始索引
+function groupOfIdx(idx) {
+  let a = 0;
+  for (let i = 0; i < GROUPS.length; i++) { a += GROUPS[i].levels.length; if (idx < a) return i; }
+  return GROUPS.length - 1;
+}
+function groupStart(gi) {
+  let a = 0;
+  for (let i = 0; i < gi; i++) a += GROUPS[i].levels.length;
+  return a;
+}
 
 const $ = (id) => document.getElementById(id);
 
@@ -33,6 +54,7 @@ const els = {
   charPicker: $("charPicker"),
   countdown: $("countdown"),
   lane: $("laneCanvas"),
+  backBtn: $("backToGroups"),
   controls: document.querySelector(".controls"),
 };
 
@@ -200,10 +222,14 @@ async function goToLevel(idx) {
   }
 }
 
-function hasNextLevel() { return levelIdx < LEVELS.length - 1; }
+// 「下一關」只在同一個大關卡內接續(章節結尾就沒有下一關)
+function hasNextLevel() {
+  const gi = groupOfIdx(levelIdx);
+  return levelIdx < groupStart(gi) + GROUPS[gi].levels.length - 1;
+}
 
-// 顯示關卡目錄(暫停偵測、藏遊戲畫面)
-function showMenu() {
+// 顯示關卡目錄(暫停偵測、藏遊戲畫面)。view: "groups"=大關卡列表、"levels"=目前章節的小關卡
+function showMenu(view = "groups") {
   stopMusic();
   if (listener) listener.pause();
   els.winBanner.hidden = true;
@@ -213,6 +239,8 @@ function showMenu() {
   els.charPicker.style.display = "none";
   els.hint.style.display = "none";
   $("title").textContent = "幼兒節奏遊戲";
+  if (view === "levels") renderLevelMenu(groupOfIdx(levelIdx));
+  else renderGroupMenu();
 }
 function hideMenu() {
   els.levelMenu.hidden = true;
@@ -222,18 +250,44 @@ function hideMenu() {
   els.hint.style.display = "";
 }
 
-// 建立目錄：每一關一張卡片(讀該關 json 拿標題)
-async function buildLevelMenu() {
+// 目錄資料：開站時先把各關標題抓好(之後選單切換都是即時的)
+let levelTitles = [];
+async function prefetchTitles() {
+  levelTitles = await Promise.all(LEVELS.map(async (lv, i) => {
+    try { const c = await loadChart(lv); return c.title || `第${i + 1}關`; }
+    catch (e) { return `第${i + 1}關`; }
+  }));
+}
+const menuTitleEl = document.querySelector(".menu-title");
+
+// 大關卡列表(章節)
+function renderGroupMenu() {
+  menuTitleEl.textContent = "選擇大關卡 🥁";
+  els.backBtn.hidden = true;
   els.levelList.innerHTML = "";
-  for (let i = 0; i < LEVELS.length; i++) {
-    let title = `第${i + 1}關`;
-    try { const c = await loadChart(LEVELS[i]); title = c.title || title; } catch (e) {}
+  GROUPS.forEach((g, gi) => {
+    const btn = document.createElement("button");
+    btn.className = "level-card group-card";
+    btn.innerHTML = `<span class="lv-num">${gi + 1}</span><span class="lv-name">${g.title}</span>`;
+    btn.addEventListener("click", () => renderLevelMenu(gi));
+    els.levelList.appendChild(btn);
+  });
+}
+
+// 某個大關卡底下的小關卡列表
+function renderLevelMenu(gi) {
+  menuTitleEl.textContent = GROUPS[gi].title + " 🥁";
+  els.backBtn.hidden = false;
+  els.levelList.innerHTML = "";
+  const start = groupStart(gi);
+  GROUPS[gi].levels.forEach((lv, k) => {
+    const i = start + k;
     const btn = document.createElement("button");
     btn.className = "level-card";
-    btn.innerHTML = `<span class="lv-num">${i + 1}</span><span class="lv-name">${title}</span>`;
+    btn.innerHTML = `<span class="lv-num">${k + 1}</span><span class="lv-name">${levelTitles[i] || `第${i + 1}關`}</span>`;
     btn.addEventListener("click", () => selectLevel(i));
     els.levelList.appendChild(btn);
-  }
+  });
 }
 
 // 選了某一關：進遊戲畫面、顯示「開始遊戲」等使用者按(要有手勢才能開麥克風)
@@ -654,7 +708,8 @@ els.sens.addEventListener("input", () => {
 els.start.addEventListener("click", startGame);
 els.retry.addEventListener("click", retry);
 els.next.addEventListener("click", nextLevel);
-els.menuBtn.addEventListener("click", showMenu);
+els.menuBtn.addEventListener("click", () => showMenu("levels")); // 遊戲中☰直接回目前章節的小關卡
+els.backBtn.addEventListener("click", renderGroupMenu);
 
 // 螢幕轉向/改變大小：依新寬度重排譜面與軌道(手機直橫切換用)
 window.addEventListener("resize", () => {
@@ -688,7 +743,7 @@ els.testCheer.addEventListener("click", () => {
   await initCharacters({ face: els.face, picker: els.charPicker });
   updateThreshMark(sensToThreshold(parseFloat(els.sens.value)));
   preloadCheer(); // 有 sounds/cheer.mp3 就優先用真人歡呼
-  await buildLevelMenu();
+  await prefetchTitles();
   const lv = parseInt(params.get("level"), 10);
   if (Number.isFinite(lv) && lv >= 1 && lv <= LEVELS.length) {
     await selectLevel(lv - 1); // ?level=2 → 直接進第2關
