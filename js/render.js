@@ -40,7 +40,24 @@ function drawBeam(ctx, x1, x2, yTop, s = 1) {
   ctx.fillRect(x1, yTop, x2 - x1, Math.max(4, 7 * s));
 }
 
-// 這份譜是否超過 4 小節(超過的話遊戲迴圈要每幀重畫，讓譜面跟著進度往左捲)
+// 螢幕能用的寬度(扣掉舞台內距)——手機窄、桌機寬
+function availWidth() {
+  const vw = (typeof window !== "undefined" && window.innerWidth) ? window.innerWidth : 1280;
+  return Math.max(300, vw - 44);
+}
+
+// 依螢幕寬決定譜面可視窗有幾小節(上限4)：桌機=4小節、手機=1~2小節。
+// 回傳可視窗的「位置單位」長度(拍+小節空隙)
+function visibleUnits() {
+  const avail = availWidth();
+  for (let k = 4; k >= 1; k--) {
+    const units = k * 4 + (k - 1) * 0.9;
+    if (units * 64 + 80 <= avail || k === 1) return units;
+  }
+  return 4;
+}
+
+// 這份譜是否超出可視窗(超過的話遊戲迴圈要每幀重畫，讓譜面跟著進度往左捲)
 export function needsScroll(notes) {
   const list = Array.isArray(notes) ? notes : [notes];
   const durOf = (t) => ({ whole: 4, half: 2, quarter: 1, eighth: 0.5, sixteenth: 0.25 }[t] ?? 1);
@@ -48,7 +65,7 @@ export function needsScroll(notes) {
   for (const nn of list) acc += durOf(nn.type);
   const lastStart = acc - durOf(list[list.length - 1].type);
   const barOf = (b) => Math.floor(b / 4 + 1e-6);
-  return lastStart + barOf(lastStart) * 0.9 > 4 * 4 + 3 * 0.9;
+  return lastStart + barOf(lastStart) * 0.9 > visibleUnits() + 1e-6;
 }
 
 // 在 canvas 上畫五線譜 + 一排音符(quarter=四分、eighth=八分；相連八分自動加符樑)
@@ -72,12 +89,11 @@ export function drawNotes(canvas, notes, state = {}) {
   const pos = starts.map(posOf);
   const total = Math.max(0.0001, pos[n - 1]);
 
-  // 譜面最多顯示 4 小節；更長的譜像太鼓軌道一樣捲動(state.curBeat=目前拍)：
-  // 左邊有一條固定「基準粗線」(貫穿整個五線譜，任何音高都碰得到)，
-  // 目前該打的音符釘在線上、整片譜一路往左滑到最後一下(不切換模式)。
-  const MAX_BARS = 4;
-  const visible = MAX_BARS * BPB + (MAX_BARS - 1) * BAR_GAP;
-  const scrolling = total > visible;
+  // 可視窗依螢幕寬自動決定(桌機4小節、手機1~2小節)；超出的譜像太鼓軌道一樣
+  // 捲動(state.curBeat=目前拍)：左邊有一條固定「基準粗線」(貫穿整個五線譜，
+  // 任何音高都碰得到)，目前該打的音符釘在線上、整片譜一路往左滑到最後一下。
+  const visible = visibleUnits();
+  const scrolling = total > visible + 1e-6;
   const anchor = visible * 0.16; // 基準線位置(對齊下方太鼓判定圈)
   // 游標的「平滑位置」：音符定位用的小節空隙是階梯狀(跨小節瞬間+0.9)，
   // 游標若直接用它會在換小節時跳一下 → 改在小節最後半拍內漸進滑過空隙
@@ -93,16 +109,19 @@ export function drawNotes(canvas, notes, state = {}) {
   }
   const denom = Math.min(total, visible);
 
-  // 音符大小固定(跟第9關一樣大)。放不下就把畫布加寬 → 譜面/頁面跟著變寬(上限=4小節寬)
+  // 音符大小固定(跟第9關一樣大)。放不下就：桌機加寬畫布(上限=可視窗寬)、
+  // 手機縮小左右邊界；再塞不下由 CSS maxWidth 均勻微縮(不會被截掉)
   const BASE_W = 560, PPB = 64; // PPB=每拍畫幾px(第9關的密度)
-  const W = Math.max(BASE_W, Math.round(denom * PPB + 150));
+  let margin = 75;
+  let needW = Math.round(denom * PPB + margin * 2);
+  if (needW > availWidth()) { margin = 40; needW = Math.round(denom * PPB + margin * 2); }
+  const legacy = !scrolling && needW < BASE_W; // 短譜維持置中舊版面(1~9關不變)
+  const W = legacy ? BASE_W : needW;
   if (canvas.width !== W) canvas.width = W;
-  if (W > BASE_W) {
-    // 寬譜：畫布固定用實際 px 寬，不讓 CSS 把它縮小
+  if (!legacy) {
     canvas.style.width = W + "px";
-    canvas.style.maxWidth = "none";
+    canvas.style.maxWidth = "100%"; // 極窄螢幕最後保險:均勻縮小而不是被截掉
   } else {
-    // 一般譜：交回 CSS 控制(小螢幕可自適應)
     canvas.style.width = "";
     canvas.style.maxWidth = "";
   }
@@ -115,7 +134,7 @@ export function drawNotes(canvas, notes, state = {}) {
   const top = H / 2 - lineGap * 2;
   ctx.strokeStyle = "#5b6b8c";
   ctx.lineWidth = 2;
-  const edge = W > BASE_W ? 30 : W * 0.10;
+  const edge = legacy ? W * 0.10 : margin * 0.4;
   for (let i = 0; i < 5; i++) {
     const y = top + i * lineGap;
     ctx.beginPath();
@@ -126,8 +145,10 @@ export function drawNotes(canvas, notes, state = {}) {
 
   // 小鼓在鼓譜的位置＝五線譜「第三間」(由下往上數)＝top + 1.5 個間距
   const cy = top + lineGap * 1.5;
-  const xa = W > BASE_W ? 75 : W * 0.22;
-  const xb = W > BASE_W ? W - 75 : W * 0.78;
+  const xa = legacy ? W * 0.22 : margin;
+  const xb = legacy ? W * 0.78 : W - margin;
+  // 基準線的像素位置存到 dataset，讓下方太鼓判定圈對齊(一上一下)
+  canvas.dataset.anchorX = String(scrolling ? xa + (xb - xa) * (anchor / denom) : W * 0.16);
   const xs = pos.map((p) => (n === 1 ? W / 2 : xa + (xb - xa) * ((p - offset) / denom)));
 
   // 捲動譜的固定基準線(跟太鼓判定圈同角色)：一條貫穿五線譜的粗線，
@@ -181,13 +202,13 @@ export function drawNotes(canvas, notes, state = {}) {
 // 參數：t=譜面時間(秒)、noteTimes=各音符時間、hit=各音符是否已打到、
 //       tolSec=容許誤差(秒)、fx=[{time}]最近打中的時間(爆星特效)、
 //       sprite={image, emoji}=跑動圖示(優先用角色圖，沒有就 emoji)
-export function drawLane(canvas, { t, noteTimes, hit = [], tolSec = 0, fx = [], sprite = {} }) {
+export function drawLane(canvas, { t, noteTimes, hit = [], tolSec = 0, fx = [], sprite = {}, anchorX = 0 }) {
   const ctx = canvas.getContext("2d");
   const W = canvas.width, H = canvas.height;
   ctx.clearRect(0, 0, W, H);
   const cy = H * 0.56;
-  // 判定圈位置：寬畫布時用跟譜面基準線同一套公式 → 跟上面的紅線垂直對齊
-  const hitX = W > 560 ? 75 + (W - 150) * 0.16 : W * 0.16;
+  // 判定圈位置：由譜面算好傳進來(anchorX) → 跟上面的紅色基準線垂直對齊
+  const hitX = anchorX || W * 0.16;
   const R = 36;
 
   // 軌道底

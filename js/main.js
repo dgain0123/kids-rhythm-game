@@ -69,6 +69,15 @@ function showLane(on) {
   els.face.style.display = on ? "none" : "";
 }
 
+// 舞台/太鼓軌道跟著譜面畫布的尺寸走(drawNotes 依螢幕寬算好了)：
+// 寬譜舞台變寬；軌道同寬同縮放 → 判定圈跟紅色基準線垂直對齊
+function syncStageLane() {
+  els.stage.classList.toggle("wide", els.noteCanvas.width > 560);
+  els.lane.width = els.noteCanvas.width;
+  els.lane.style.width = els.noteCanvas.style.width;
+  els.lane.style.maxWidth = els.noteCanvas.style.maxWidth;
+}
+
 function isTimedChart(c) {
   return !!(c && c.bpm && Array.isArray(c.notes) && c.notes.length && c.notes[0].beat != null);
 }
@@ -153,6 +162,7 @@ function startTimedLoop() {
         tolSec: game.tolSec,
         fx: laneFx,
         sprite: laneSprite,
+        anchorX: parseFloat(els.noteCanvas.dataset.anchorX || "0"),
       });
     }
     rafId = requestAnimationFrame(tick);
@@ -174,17 +184,7 @@ async function goToLevel(idx) {
   $("title").textContent = chart.title;
   els.hint.textContent = chart.hint || "";
   drawNotes(els.noteCanvas, chart.notes);
-  // 寬譜(音符多)：舞台跟著譜面變寬(音符大小不縮)
-  els.stage.classList.toggle("wide", els.noteCanvas.width > 560);
-  // 太鼓軌道跟譜面同寬 → 判定圈跟譜面的紅色基準線垂直對齊(一上一下)
-  els.lane.width = els.noteCanvas.width;
-  if (els.noteCanvas.width > 560) {
-    els.lane.style.width = els.noteCanvas.width + "px";
-    els.lane.style.maxWidth = "none";
-  } else {
-    els.lane.style.width = "";
-    els.lane.style.maxWidth = "";
-  }
+  syncStageLane();
   // 數下數關卡：要打幾下就顯示幾隻角色(掛號碼牌)
   // 跟拍關卡：開始前只放 1 隻、不掛號碼牌(角色會在太鼓軌道上跑)
   if (isTimedChart(chart)) setCharCount(1, { numbers: false });
@@ -655,6 +655,13 @@ els.start.addEventListener("click", startGame);
 els.retry.addEventListener("click", retry);
 els.next.addEventListener("click", nextLevel);
 els.menuBtn.addEventListener("click", showMenu);
+
+// 螢幕轉向/改變大小：依新寬度重排譜面與軌道(手機直橫切換用)
+window.addEventListener("resize", () => {
+  if (!chart) return;
+  redrawChart();
+  syncStageLane();
+});
 
 // 註冊 Service Worker → 離線也能玩、可加到主畫面
 if ("serviceWorker" in navigator) {
