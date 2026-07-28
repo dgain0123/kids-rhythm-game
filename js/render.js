@@ -48,27 +48,7 @@ export function drawNotes(canvas, notes, state = {}) {
   const hit = state.hit || [];
   const active = state.active ?? -1;
   const colorOf = (i) => (hit[i] ? "#1fa96b" : i === active ? "#ff8a3d" : "#111");
-  const ctx = canvas.getContext("2d");
-  const W = canvas.width, H = canvas.height;
-  ctx.clearRect(0, 0, W, H);
-
-  // 五線譜五條線
-  const lineGap = 18;
-  const top = H / 2 - lineGap * 2;
-  ctx.strokeStyle = "#5b6b8c";
-  ctx.lineWidth = 2;
-  for (let i = 0; i < 5; i++) {
-    const y = top + i * lineGap;
-    ctx.beginPath();
-    ctx.moveTo(W * 0.10, y);
-    ctx.lineTo(W * 0.90, y);
-    ctx.stroke();
-  }
-
-  // 小鼓在鼓譜的位置＝五線譜「第三間」(由下往上數)＝top + 1.5 個間距
-  const cy = top + lineGap * 1.5;
   const n = list.length;
-  const x0 = W * 0.22, x1 = W * 0.78;
 
   // 依「拍」定位：四分=1拍、八分=半拍 → 每拍等寬(兩個八分＝一拍＝一組)
   const durOf = t => ({ whole: 4, half: 2, quarter: 1, eighth: 0.5, sixteenth: 0.25 }[t] ?? 1);
@@ -79,10 +59,42 @@ export function drawNotes(canvas, notes, state = {}) {
   const barOf = (b) => Math.floor(b / BPB + 1e-6);
   const pos = starts.map((p) => p + barOf(p) * BAR_GAP);
   const denom = Math.max(0.0001, pos[n - 1]);
-  // 譜超過一小節：左右邊界放寬、音符整體縮小(3小節17顆也塞得下)
-  const wide = denom > 4.5;
-  const xa = wide ? W * 0.07 : x0, xb = wide ? W * 0.93 : x1;
-  const s = Math.max(0.5, Math.min(1, 5.2 / denom));
+
+  // 音符大小固定(跟第9關一樣大)。放不下就把畫布加寬 → 譜面/頁面跟著變寬
+  const BASE_W = 560, PPB = 64; // PPB=每拍畫幾px(第9關的密度)
+  const W = Math.max(BASE_W, Math.round(denom * PPB + 150));
+  if (canvas.width !== W) canvas.width = W;
+  if (W > BASE_W) {
+    // 寬譜：畫布固定用實際 px 寬，不讓 CSS 把它縮小
+    canvas.style.width = W + "px";
+    canvas.style.maxWidth = "none";
+  } else {
+    // 一般譜：交回 CSS 控制(小螢幕可自適應)
+    canvas.style.width = "";
+    canvas.style.maxWidth = "";
+  }
+  const H = canvas.height;
+  const ctx = canvas.getContext("2d");
+  ctx.clearRect(0, 0, W, H);
+
+  // 五線譜五條線
+  const lineGap = 18;
+  const top = H / 2 - lineGap * 2;
+  ctx.strokeStyle = "#5b6b8c";
+  ctx.lineWidth = 2;
+  const edge = W > BASE_W ? 30 : W * 0.10;
+  for (let i = 0; i < 5; i++) {
+    const y = top + i * lineGap;
+    ctx.beginPath();
+    ctx.moveTo(edge, y);
+    ctx.lineTo(W - edge, y);
+    ctx.stroke();
+  }
+
+  // 小鼓在鼓譜的位置＝五線譜「第三間」(由下往上數)＝top + 1.5 個間距
+  const cy = top + lineGap * 1.5;
+  const xa = W > BASE_W ? 75 : W * 0.22;
+  const xb = W > BASE_W ? W - 75 : W * 0.78;
   const xs = pos.map((p) => (n === 1 ? W / 2 : xa + (xb - xa) * (p / denom)));
 
   // 小節線(畫在跨小節的空隙正中間，貫穿五條線)
@@ -101,23 +113,23 @@ export function drawNotes(canvas, notes, state = {}) {
     if (i === active && !hit[i]) {
       ctx.fillStyle = "rgba(255,138,61,0.25)";
       ctx.beginPath();
-      ctx.arc(xs[i], cy, Math.max(15, 24 * s), 0, Math.PI * 2);
+      ctx.arc(xs[i], cy, 24, 0, Math.PI * 2);
       ctx.fill();
     }
-    drawHead(ctx, xs[i], cy, colorOf(i), s);
-    drawStem(ctx, xs[i], cy, colorOf(i), s);
+    drawHead(ctx, xs[i], cy, colorOf(i));
+    drawStem(ctx, xs[i], cy, colorOf(i));
   }
 
   // 八分音符：每「兩個一組」(一拍)打符樑，組跟組分開；落單的畫旗子(不跨小節連樑)
-  const yTop = cy - STEM_LEN * s;
+  const yTop = cy - STEM_LEN;
   let i = 0;
   while (i < n) {
     if (list[i].type === "eighth") {
       if (i + 1 < n && list[i + 1].type === "eighth"
           && barOf(starts[i]) === barOf(starts[i + 1])) {
-        drawBeam(ctx, xs[i] + STEM_DX * s, xs[i + 1] + STEM_DX * s, yTop, s); // 兩個一組
+        drawBeam(ctx, xs[i] + STEM_DX, xs[i + 1] + STEM_DX, yTop); // 兩個一組
         i += 2;
-      } else { drawFlag(ctx, xs[i], cy, s); i += 1; }
+      } else { drawFlag(ctx, xs[i], cy); i += 1; }
     } else i++;
   }
 }

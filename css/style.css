@@ -13,7 +13,7 @@ html, body {
   min-height: 100%;
   font-family: "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
   background: linear-gradient(160deg, var(--bg1), var(--bg2));
-  overflow-x: hidden;
+  overflow-x: auto;           /* 寬譜關卡頁面會變寬，需要時可左右捲 */
   overflow-y: scroll;         /* 一律顯示捲軸，內容太高時才能上下捲 */
   user-select: none;
   -webkit-user-select: none;
@@ -64,6 +64,9 @@ html, body {
   background: #f7f9ff;
   border-radius: 20px;
 }
+/* 寬譜關卡(音符多)：舞台跟著譜面變寬，音符維持原尺寸 */
+.stage.wide { width: fit-content; max-width: none; }
+.stage.wide #noteCanvas { height: 110px; }
 
 /* 角色圖(可多隻並排＝該關要打幾下) */
 #face {

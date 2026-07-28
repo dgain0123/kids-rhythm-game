@@ -140,6 +140,8 @@ async function goToLevel(idx) {
   $("title").textContent = chart.title;
   els.hint.textContent = chart.hint || "";
   drawNotes(els.noteCanvas, chart.notes);
+  // 寬譜(音符多)：舞台跟著譜面變寬(音符大小不縮)
+  els.stage.classList.toggle("wide", els.noteCanvas.width > 560);
   // 數下數關卡：要打幾下就顯示幾隻角色(掛號碼牌)
   // 跟拍關卡：開始前只放 1 隻、不掛號碼牌(角色會在太鼓軌道上跑)
   if (isTimedChart(chart)) setCharCount(1, { numbers: false });
@@ -194,7 +196,7 @@ async function buildLevelMenu() {
 async function selectLevel(idx) {
   hideMenu();
   await goToLevel(idx);
-  els.stage.className = "stage";
+  els.stage.className = "stage" + (els.noteCanvas.width > 560 ? " wide" : "");
   showCharacter();
   els.start.hidden = false;
   els.start.disabled = false;
