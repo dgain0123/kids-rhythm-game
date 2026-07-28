@@ -73,16 +73,16 @@ export function drawNotes(canvas, notes, state = {}) {
   const total = Math.max(0.0001, pos[n - 1]);
 
   // 譜面最多顯示 4 小節；更長的譜像太鼓軌道一樣捲動(state.curBeat=目前拍)：
-  // 左邊有固定「基準點」，目前該打的音符釘在基準點上、整片譜往左滑；
-  // 滑到底(剩下的譜全進畫面)之後才停住，換回游標往右走的原地變色模式。
+  // 左邊有一條固定「基準粗線」(貫穿整個五線譜，任何音高都碰得到)，
+  // 目前該打的音符釘在線上、整片譜一路往左滑到最後一下(不切換模式)。
   const MAX_BARS = 4;
   const visible = MAX_BARS * BPB + (MAX_BARS - 1) * BAR_GAP;
   const scrolling = total > visible;
-  const anchor = visible * 0.16; // 基準點位置(對齊下方太鼓判定圈的比例)
+  const anchor = visible * 0.16; // 基準線位置(對齊下方太鼓判定圈的比例)
   let offset = 0;
   if (scrolling) {
     const cur = posOf(Math.max(0, state.curBeat ?? 0));
-    offset = Math.min(cur - anchor, total - visible); // 開始時第1顆就停在基準點上
+    offset = cur - anchor; // 不設上限：一路滑到最後一下停在線上
   }
   const denom = Math.min(total, visible);
 
@@ -123,16 +123,12 @@ export function drawNotes(canvas, notes, state = {}) {
   const xb = W > BASE_W ? W - 75 : W * 0.78;
   const xs = pos.map((p) => (n === 1 ? W / 2 : xa + (xb - xa) * ((p - offset) / denom)));
 
-  // 捲動譜的固定基準點(跟太鼓判定圈同角色)：粉紅圈+淡底
+  // 捲動譜的固定基準線(跟太鼓判定圈同角色)：一條貫穿五線譜的粗線，
+  // 任何音高位置的音符滑到線上＝現在該打
   if (scrolling) {
     const ax = xa + (xb - xa) * (anchor / denom);
-    ctx.fillStyle = "rgba(255,90,138,0.10)";
-    ctx.fillRect(ax - 26, top - 12, 52, lineGap * 4 + 24);
-    ctx.strokeStyle = "rgba(255,90,138,0.55)";
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.arc(ax, cy, 25, 0, Math.PI * 2);
-    ctx.stroke();
+    ctx.fillStyle = "rgba(255,90,138,0.45)";
+    ctx.fillRect(ax - 6, top - 18, 12, lineGap * 4 + 36);
   }
 
   // 小節線(畫在跨小節的空隙正中間，貫穿五條線；捲動時跟著位移)
