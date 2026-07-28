@@ -38,9 +38,18 @@ def count_voices(sr=44100, voice="Samantha"):
             x = _load_wav(tmp)
         finally:
             os.remove(tmp)
-        loud = np.where(np.abs(x) > 0.01)[0]
+        # 去頭尾靜音，但保留一點緩衝(頭 30ms/尾 120ms)，並加淡入淡出，
+        # 避免切太狠造成「卡卡」的生硬邊緣
+        loud = np.where(np.abs(x) > 0.005)[0]
         if len(loud):
-            x = x[loud[0]: loud[-1] + 1]
+            a = max(0, loud[0] - int(0.03 * sr))
+            b = min(len(x), loud[-1] + 1 + int(0.12 * sr))
+            x = x[a:b]
+        fi = min(len(x), int(0.008 * sr))
+        fo = min(len(x), int(0.08 * sr))
+        x = x.copy()
+        x[:fi] *= np.linspace(0, 1, fi)
+        x[-fo:] *= np.linspace(1, 0, fo)
         x = x / max(1e-9, float(np.max(np.abs(x))))
         out.append(x)
     return out
