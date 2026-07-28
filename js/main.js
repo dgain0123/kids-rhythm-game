@@ -494,10 +494,14 @@ function micInfo(l) {
 async function startGame() {
   els.start.disabled = true;
   els.start.textContent = "開麥克風中…";
+  // 診斷用：?nomic=1 完全不開麥克風，只播音樂——用來分辨
+  // 「音樂卡頓」是麥克風裝置拖累整個音訊管線、還是播放端本身的問題
+  const NOMIC = new URLSearchParams(location.search).get("nomic");
   try {
     unlockAudio(); // 趁「開始遊戲」手勢解鎖 Web Audio
     primeCheer();  // 同一手勢解鎖真人歡呼的 <audio> 元素，過關才播得出
     const th = sensToThreshold(parseFloat(els.sens.value));
+    if (NOMIC) throw Object.assign(new Error("nomic"), { nomic: true });
     // 麥克風串流若已死掉(當機/被系統收回)，丟掉重開，避免後面幾關讀到全 0
     if (listener && !listener.isLive()) { listener.stop(); listener = null; }
     if (!listener) {
@@ -538,11 +542,14 @@ async function startGame() {
       await listener.resume();
     }
   } catch (e) {
-    els.status.textContent = "拿不到麥克風 😵";
-    els.debug.textContent = "❌ 錯誤：" + (e && e.name) + " - " + (e && e.message);
-    els.start.disabled = false;
-    els.start.textContent = "開始遊戲";
-    return;
+    if (!(e && e.nomic)) {
+      els.status.textContent = "拿不到麥克風 😵";
+      els.debug.textContent = "❌ 錯誤：" + (e && e.name) + " - " + (e && e.message);
+      els.start.disabled = false;
+      els.start.textContent = "開始遊戲";
+      return;
+    }
+    // nomic 測試模式：跳過麥克風，繼續開始遊戲(只播音樂)
   }
 
   els.start.hidden = true;
