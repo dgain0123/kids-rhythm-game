@@ -3,41 +3,41 @@
 const STEM_DX = 12;   // 符桿相對符頭的水平位移
 const STEM_LEN = 60;  // 符桿長度
 
-// 實心符頭(color: 一般黑、打到綠、當前拍點橘)
-function drawHead(ctx, cx, cy, color = "#111") {
+// 實心符頭(color: 一般黑、打到綠、當前拍點橘；s=縮放，音符多時整體縮小)
+function drawHead(ctx, cx, cy, color = "#111", s = 1) {
   ctx.save();
   ctx.translate(cx, cy);
   ctx.rotate(-0.35);
   ctx.fillStyle = color;
   ctx.beginPath();
-  ctx.ellipse(0, 0, 13, 10, 0, 0, Math.PI * 2);
+  ctx.ellipse(0, 0, 13 * s, 10 * s, 0, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
 }
 // 符桿
-function drawStem(ctx, cx, cy, color = "#111") {
+function drawStem(ctx, cx, cy, color = "#111", s = 1) {
   ctx.strokeStyle = color;
-  ctx.lineWidth = 4;
+  ctx.lineWidth = Math.max(2.5, 4 * s);
   ctx.beginPath();
-  ctx.moveTo(cx + STEM_DX, cy - 2);
-  ctx.lineTo(cx + STEM_DX, cy - STEM_LEN);
+  ctx.moveTo(cx + STEM_DX * s, cy - 2);
+  ctx.lineTo(cx + STEM_DX * s, cy - STEM_LEN * s);
   ctx.stroke();
 }
 // 單個八分音符的旗子(符尾)
-function drawFlag(ctx, cx, cy) {
-  const x = cx + STEM_DX, y = cy - STEM_LEN;
+function drawFlag(ctx, cx, cy, s = 1) {
+  const x = cx + STEM_DX * s, y = cy - STEM_LEN * s;
   ctx.fillStyle = "#111";
   ctx.beginPath();
   ctx.moveTo(x, y);
-  ctx.quadraticCurveTo(x + 18, y + 10, x + 12, y + 28);
-  ctx.quadraticCurveTo(x + 15, y + 12, x, y + 14);
+  ctx.quadraticCurveTo(x + 18 * s, y + 10 * s, x + 12 * s, y + 28 * s);
+  ctx.quadraticCurveTo(x + 15 * s, y + 12 * s, x, y + 14 * s);
   ctx.closePath();
   ctx.fill();
 }
 // 符樑(把相連的八分音符連起來)
-function drawBeam(ctx, x1, x2, yTop) {
+function drawBeam(ctx, x1, x2, yTop, s = 1) {
   ctx.fillStyle = "#111";
-  ctx.fillRect(x1, yTop, x2 - x1, 7);
+  ctx.fillRect(x1, yTop, x2 - x1, Math.max(4, 7 * s));
 }
 
 // 在 canvas 上畫五線譜 + 一排音符(quarter=四分、eighth=八分；相連八分自動加符樑)
@@ -77,15 +77,19 @@ export function drawNotes(canvas, notes, state = {}) {
   // 超過一小節(4/4)就畫小節線隔開：跨小節處左右多留空間
   const BPB = 4, BAR_GAP = 0.9;
   const barOf = (b) => Math.floor(b / BPB + 1e-6);
-  const pos = starts.map((s) => s + barOf(s) * BAR_GAP);
+  const pos = starts.map((p) => p + barOf(p) * BAR_GAP);
   const denom = Math.max(0.0001, pos[n - 1]);
-  const xs = pos.map((p) => (n === 1 ? W / 2 : x0 + (x1 - x0) * (p / denom)));
+  // 譜超過一小節：左右邊界放寬、音符整體縮小(3小節17顆也塞得下)
+  const wide = denom > 4.5;
+  const xa = wide ? W * 0.07 : x0, xb = wide ? W * 0.93 : x1;
+  const s = Math.max(0.5, Math.min(1, 5.2 / denom));
+  const xs = pos.map((p) => (n === 1 ? W / 2 : xa + (xb - xa) * (p / denom)));
 
   // 小節線(畫在跨小節的空隙正中間，貫穿五條線)
   ctx.strokeStyle = "#5b6b8c";
   ctx.lineWidth = 3;
   for (let b = 1; b <= barOf(starts[n - 1]); b++) {
-    const lx = x0 + (x1 - x0) * ((b * BPB + (b - 1) * BAR_GAP + BAR_GAP / 2) / denom);
+    const lx = xa + (xb - xa) * ((b * BPB + (b - 1) * BAR_GAP + BAR_GAP / 2) / denom);
     ctx.beginPath();
     ctx.moveTo(lx, top);
     ctx.lineTo(lx, top + lineGap * 4);
@@ -97,23 +101,23 @@ export function drawNotes(canvas, notes, state = {}) {
     if (i === active && !hit[i]) {
       ctx.fillStyle = "rgba(255,138,61,0.25)";
       ctx.beginPath();
-      ctx.arc(xs[i], cy, 24, 0, Math.PI * 2);
+      ctx.arc(xs[i], cy, Math.max(15, 24 * s), 0, Math.PI * 2);
       ctx.fill();
     }
-    drawHead(ctx, xs[i], cy, colorOf(i));
-    drawStem(ctx, xs[i], cy, colorOf(i));
+    drawHead(ctx, xs[i], cy, colorOf(i), s);
+    drawStem(ctx, xs[i], cy, colorOf(i), s);
   }
 
   // 八分音符：每「兩個一組」(一拍)打符樑，組跟組分開；落單的畫旗子(不跨小節連樑)
-  const yTop = cy - STEM_LEN;
+  const yTop = cy - STEM_LEN * s;
   let i = 0;
   while (i < n) {
     if (list[i].type === "eighth") {
       if (i + 1 < n && list[i + 1].type === "eighth"
           && barOf(starts[i]) === barOf(starts[i + 1])) {
-        drawBeam(ctx, xs[i] + STEM_DX, xs[i + 1] + STEM_DX, yTop); // 兩個一組
+        drawBeam(ctx, xs[i] + STEM_DX * s, xs[i + 1] + STEM_DX * s, yTop, s); // 兩個一組
         i += 2;
-      } else { drawFlag(ctx, xs[i], cy); i += 1; }
+      } else { drawFlag(ctx, xs[i], cy, s); i += 1; }
     } else i++;
   }
 }

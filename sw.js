@@ -11,10 +11,10 @@ const CORE = [
   "./js/main.js", "./js/audio.js", "./js/game.js", "./js/render.js", "./js/characters.js",
   "./charts/level1.json", "./charts/level2.json", "./charts/level3.json", "./charts/level4.json",
   "./charts/level5.json", "./charts/level6.json", "./charts/level7.json", "./charts/level8.json",
-  "./charts/level9.json",
+  "./charts/level9.json", "./charts/level10.json",
   "./characters/index.json", "./characters/cat.png", "./characters/rabbit.png",
   "./sounds/cheer.wav", "./sounds/cheer.mp3", "./sounds/fail.wav",
-  "./sounds/music/level9.m4a",
+  "./sounds/music/level9.m4a", "./sounds/music/level10.m4a",
   "./manifest.webmanifest", "./icon-192.png", "./icon-512.png",
 ];
 

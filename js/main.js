@@ -5,7 +5,7 @@ import { drawNotes, drawLane, confetti } from "./render.js";
 import { initCharacters, showCharacter, setCharCount, getCurrentChar } from "./characters.js";
 
 // 關卡清單(依順序)。新增關卡就在 charts/ 加 levelN.json 並加進這裡
-const LEVELS = ["level1", "level2", "level3", "level4", "level5", "level6", "level7", "level8", "level9"];
+const LEVELS = ["level1", "level2", "level3", "level4", "level5", "level6", "level7", "level8", "level9", "level10"];
 let levelIdx = 0;
 
 const $ = (id) => document.getElementById(id);
@@ -225,7 +225,7 @@ function onState(state, info) {
       stopMusic();
       celebrateSound();   // 聲音先播，讓音訊管線先建立
       stopListening();
-      els.face.innerHTML = '<span class="char-emoji">🎉</span>'.repeat(info.maxHits); // 過關換成拉炮(數量對應)
+      els.face.innerHTML = '<span class="char-emoji">🎉</span>'.repeat(Math.min(info.maxHits, 8)); // 過關換成拉炮(最多8個,太多會擠出畫面)
       els.winBanner.hidden = false;
       els.status.textContent = "過關！你好棒！";
       els.retry.hidden = false;

@@ -1,0 +1,97 @@
+{
+  "title": "第10關：變快了！打17下",
+  "bpm": 20.0,
+  "maxHits": 17,
+  "notes": [
+    {
+      "type": "eighth",
+      "drum": "snare",
+      "beat": 0.0
+    },
+    {
+      "type": "eighth",
+      "drum": "snare",
+      "beat": 0.5
+    },
+    {
+      "type": "eighth",
+      "drum": "snare",
+      "beat": 1.0
+    },
+    {
+      "type": "eighth",
+      "drum": "snare",
+      "beat": 1.5
+    },
+    {
+      "type": "eighth",
+      "drum": "snare",
+      "beat": 2.0
+    },
+    {
+      "type": "eighth",
+      "drum": "snare",
+      "beat": 2.5
+    },
+    {
+      "type": "eighth",
+      "drum": "snare",
+      "beat": 3.0
+    },
+    {
+      "type": "eighth",
+      "drum": "snare",
+      "beat": 3.5
+    },
+    {
+      "type": "eighth",
+      "drum": "snare",
+      "beat": 4.0
+    },
+    {
+      "type": "eighth",
+      "drum": "snare",
+      "beat": 4.5
+    },
+    {
+      "type": "eighth",
+      "drum": "snare",
+      "beat": 5.0
+    },
+    {
+      "type": "eighth",
+      "drum": "snare",
+      "beat": 5.5
+    },
+    {
+      "type": "eighth",
+      "drum": "snare",
+      "beat": 6.0
+    },
+    {
+      "type": "eighth",
+      "drum": "snare",
+      "beat": 6.5
+    },
+    {
+      "type": "eighth",
+      "drum": "snare",
+      "beat": 7.0
+    },
+    {
+      "type": "eighth",
+      "drum": "snare",
+      "beat": 7.5
+    },
+    {
+      "type": "quarter",
+      "drum": "snare",
+      "beat": 8.0
+    }
+  ],
+  "hint": "音樂變快囉，跟著拍子打鼓！",
+  "toleranceBeats": 0.5,
+  "music": "./sounds/music/level10.m4a",
+  "leadInSec": 6.0,
+  "metronome": "eighth"
+}
