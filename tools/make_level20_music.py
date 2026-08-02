@@ -27,7 +27,7 @@ CHAPTER = 2         # 這關屬第幾個大關卡(決定音樂風格)
 HIT = 2.0           # 拍點間隔 2 秒(= BPM 10 的 1/3 拍＝三連音一顆)
 PRE = 1.0           # 開頭靜音緩衝(= chart 的 preRollSec)
 LEAD_HITS = 4       # 預備拍 4 聲(間隔＝拍點間隔，速度50以下的規矩)
-N_HITS = 12         # 這關要打 12 下
+N_HITS = 13         # 這關要打 13 下(12 個三連音 + 第2小節開頭 1 個四分音符收尾)
 TAIL = 4.0
 
 STYLE = style_for_chapter(CHAPTER)

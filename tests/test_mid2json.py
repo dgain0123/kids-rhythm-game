@@ -178,9 +178,11 @@ def test_count_mode_no_timing():
 
 
 def test_triplet_timed_level():
-    """第20關(三連音跟拍關卡)：同一份 MIDI 不開 count_mode → 要有 bpm/beat，
-    拍點時間＝每 2 秒一下(BPM10 的 1/3 拍)，容許 1/3 拍＝±2 秒。"""
-    path = _make_midi([(i / 3.0, 38, 0.325) for i in range(12)], bpm=10, is_drum=False)
+    """第20關(三連音跟拍關卡)：12 個三連音 + 第2小節開頭 1 個四分音符收尾＝13 下。
+    不開 count_mode → 要有 bpm/beat；拍點每 2 秒一下(BPM10 的 1/3 拍)，容許 1/3 拍＝±2 秒。
+    最後那顆用 MIDI 實際音長(約 1 拍)判成 quarter，不可以被貼成 triplet。"""
+    events = [(i / 3.0, 38, 0.325) for i in range(12)] + [(4.0, 38, 0.992)]
+    path = _make_midi(events, bpm=10, is_drum=False)
     try:
         chart = mid2json.convert(path, tolerance=0.3333, metronome="triplet",
                                  music="./sounds/music/level20.m4a",
@@ -188,6 +190,9 @@ def test_triplet_timed_level():
         assert chart["bpm"] == 10.0
         assert chart["metronome"] == "triplet"
         assert chart["leadInSec"] == 9
+        assert chart["maxHits"] == 13
+        types = [n["type"] for n in chart["notes"]]
+        assert types == ["triplet"] * 12 + ["quarter"], types
         spb = 60.0 / chart["bpm"]
         times = [n["beat"] * spb for n in chart["notes"]]
         assert all(abs(t - 2.0 * i) < 0.01 for i, t in enumerate(times)), times

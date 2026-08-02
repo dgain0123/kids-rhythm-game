@@ -1,7 +1,7 @@
 {
   "title": "速度10",
   "bpm": 10.0,
-  "maxHits": 12,
+  "maxHits": 13,
   "notes": [
     {
       "type": "triplet",
@@ -62,9 +62,14 @@
       "type": "triplet",
       "drum": "snare",
       "beat": 3.667
+    },
+    {
+      "type": "quarter",
+      "drum": "snare",
+      "beat": 4.0
     }
   ],
-  "hint": "跟著音樂打鼓！三個一組，一共12下～",
+  "hint": "跟著音樂打鼓！三個一組，最後一下長音～",
   "toleranceBeats": 0.3333,
   "music": "./sounds/music/level20.m4a",
   "leadInSec": 9.0,
