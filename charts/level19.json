@@ -1,0 +1,55 @@
+{
+  "title": "打12下",
+  "maxHits": 12,
+  "notes": [
+    {
+      "type": "triplet",
+      "drum": "snare"
+    },
+    {
+      "type": "triplet",
+      "drum": "snare"
+    },
+    {
+      "type": "triplet",
+      "drum": "snare"
+    },
+    {
+      "type": "triplet",
+      "drum": "snare"
+    },
+    {
+      "type": "triplet",
+      "drum": "snare"
+    },
+    {
+      "type": "triplet",
+      "drum": "snare"
+    },
+    {
+      "type": "triplet",
+      "drum": "snare"
+    },
+    {
+      "type": "triplet",
+      "drum": "snare"
+    },
+    {
+      "type": "triplet",
+      "drum": "snare"
+    },
+    {
+      "type": "triplet",
+      "drum": "snare"
+    },
+    {
+      "type": "triplet",
+      "drum": "snare"
+    },
+    {
+      "type": "triplet",
+      "drum": "snare"
+    }
+  ],
+  "hint": "四個三連音，一共打12下鼓！"
+}

@@ -33,6 +33,8 @@ function renderCurrent() {
     html += `<div class="char-item char-${ch.id}">${num}${mediaHTML(ch, "char-media")}</div>`;
   }
   els.face.innerHTML = html;
+  // 超過 8 隻(第19關起)：改成可換行的縮小版排法，不然會擠出畫面被切掉
+  els.face.classList.toggle("many", charCount > 8);
   // 選單高亮
   [...els.picker.querySelectorAll(".char-btn")].forEach(b =>
     b.classList.toggle("active", b.dataset.id === ch.id));

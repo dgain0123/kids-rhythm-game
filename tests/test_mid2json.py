@@ -30,6 +30,10 @@ def test_snap_note_type():
     assert mid2json.snap_note_type(2.0) == "half"
     assert mid2json.snap_note_type(0.25) == "sixteenth"
     assert mid2json.snap_note_type(4.0) == "whole"
+    # 三連音(1/3 拍)：加進來之後，八分/十六分不可以被搶走
+    assert mid2json.snap_note_type(1.0 / 3.0) == "triplet"
+    assert mid2json.snap_note_type(0.334) == "triplet"  # beat 四捨五入到小數三位的實際值
+    assert mid2json.snap_note_type(0.325) == "triplet"  # 斷奏輸入的最後一顆(音長 0.325 拍)
 
 
 def test_gm_mapping():
@@ -133,6 +137,42 @@ def test_slow_bpm10_eighths():
         assert chart["bpm"] == 10.0
         assert [n["beat"] for n in chart["notes"]] == [0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5]
         assert all(n["type"] == "eighth" for n in chart["notes"])
+    finally:
+        os.remove(path)
+
+
+def test_triplets_one_bar():
+    """第19關：BPM10、每 2 秒一下(1/3 拍)、共 12 下＝4 個三連音(1 小節)。
+    最後一顆用 MIDI 音長(1.95 秒=0.325 拍)判，也要是 triplet。"""
+    events = [(i / 3.0, 38, 0.325) for i in range(12)]
+    path = _make_midi(events, bpm=10, is_drum=False)
+    try:
+        chart = mid2json.convert(path)
+        assert len(chart["notes"]) == 12
+        assert all(n["type"] == "triplet" for n in chart["notes"]), \
+            [n["type"] for n in chart["notes"]]
+        assert all(n["drum"] == "snare" for n in chart["notes"])
+        # 12 顆三連音 = 4 拍 = 剛好一小節(最後一顆在第 11/3 拍)
+        assert abs(chart["notes"][-1]["beat"] - 11 / 3.0) < 0.01
+    finally:
+        os.remove(path)
+
+
+def test_count_mode_no_timing():
+    """數下數關卡(不配速度)：輸出不能有 bpm，音符不能有 beat
+    (有的話遊戲會誤判成跟拍模式)。"""
+    path = _make_midi([(i / 3.0, 38, 0.325) for i in range(12)], bpm=10, is_drum=False)
+    try:
+        chart = mid2json.convert(path, count_mode=True, title="打12下", max_hits=12)
+        assert "bpm" not in chart
+        assert all("beat" not in n for n in chart["notes"])
+        assert chart["title"] == "打12下"
+        assert chart["maxHits"] == 12
+        assert len(chart["notes"]) == 12
+        # 沒開 count_mode 就照舊有 bpm/beat(舊關卡不受影響)
+        timed = mid2json.convert(path)
+        assert timed["bpm"] == 10.0
+        assert timed["notes"][0]["beat"] == 0.0
     finally:
         os.remove(path)
 

@@ -20,6 +20,8 @@
     --metronome NAME     節拍器細分(如 eighth/quarter)，寫進 metronome
                          (規矩：每個跟拍關卡的音樂都要含節拍器聲，細分每關可不同，
                           實際聲音烤在音樂檔裡，這欄位是規格記錄)
+    --count-mode         數下數關卡(不配速度)：輸出不含 bpm、音符不含 beat
+                         → 遊戲走「打夠幾下就過關」的模式，不判拍子
 
 MIDI 音軌：優先讀鼓軌(is_drum)；整份都沒有鼓軌時，改收所有音軌
 (Logic 匯出的軟體樂器鼓軌常常沒標 is_drum，音高照 GM 鼓對照)。
@@ -43,11 +45,13 @@ GM_TO_DRUM = {
 }
 
 # 音符時值(以拍為單位) → 名稱；轉檔時把「到下一下的間隔」貼到最近的標準時值
+# triplet＝一拍三連音的一顆(1/3 拍)：三顆一組剛好一拍，譜面連樑並標「3」
 NOTE_VALUES = {
     "whole": 4.0,
     "half": 2.0,
     "quarter": 1.0,
     "eighth": 0.5,
+    "triplet": 1.0 / 3.0,
     "sixteenth": 0.25,
 }
 
@@ -86,7 +90,7 @@ def collect_hits(pm: pretty_midi.PrettyMIDI):
 
 def convert(midi_path, title=None, hint=None, only=None, bars=None,
             max_hits=None, dedup_ms=30, tolerance=None, music=None, lead_in=None,
-            metronome=None, pre_roll=None):
+            metronome=None, pre_roll=None, count_mode=False):
     pm = pretty_midi.PrettyMIDI(midi_path)
     resolution = pm.resolution or 480
 
@@ -144,12 +148,14 @@ def convert(midi_path, title=None, hint=None, only=None, bars=None,
     if not notes:
         raise ValueError("過濾後沒有剩下任何音符(檢查 --only / --bars 條件)。")
 
-    chart = {
-        "title": title or os.path.splitext(os.path.basename(midi_path))[0],
-        "bpm": round(bpm, 2),
-        "maxHits": max_hits if max_hits is not None else len(notes),
-        "notes": [{"type": n["type"], "drum": n["drum"], "beat": n["beat"]} for n in notes],
-    }
+    # 數下數關卡(count_mode)：不寫 bpm/beat → 遊戲不判拍子，只看打幾下
+    chart = {"title": title or os.path.splitext(os.path.basename(midi_path))[0]}
+    if not count_mode:
+        chart["bpm"] = round(bpm, 2)
+    chart["maxHits"] = max_hits if max_hits is not None else len(notes)
+    chart["notes"] = [{"type": n["type"], "drum": n["drum"]} if count_mode
+                      else {"type": n["type"], "drum": n["drum"], "beat": n["beat"]}
+                      for n in notes]
     if hint:
         chart["hint"] = hint
     if tolerance is not None:
@@ -180,13 +186,15 @@ def main(argv=None):
     ap.add_argument("--lead-in", type=float, dest="lead_in")
     ap.add_argument("--metronome")
     ap.add_argument("--pre-roll", type=float, dest="pre_roll")
+    ap.add_argument("--count-mode", action="store_true", dest="count_mode")
     args = ap.parse_args(argv)
 
     only = set(s.strip() for s in args.only.split(",")) if args.only else None
     chart = convert(args.midi, title=args.title, hint=args.hint, only=only,
                     bars=args.bars, max_hits=args.max_hits, dedup_ms=args.dedup,
                     tolerance=args.tolerance, music=args.music, lead_in=args.lead_in,
-                    metronome=args.metronome, pre_roll=args.pre_roll)
+                    metronome=args.metronome, pre_roll=args.pre_roll,
+                    count_mode=args.count_mode)
 
     out = args.out
     if not out:
@@ -196,7 +204,8 @@ def main(argv=None):
     os.makedirs(os.path.dirname(out), exist_ok=True)
     with open(out, "w", encoding="utf-8") as f:
         json.dump(chart, f, ensure_ascii=False, indent=2)
-    print(f"✅ 轉好了：{out}（{len(chart['notes'])} 個音符, bpm={chart['bpm']}）")
+    mode = f"bpm={chart['bpm']}" if "bpm" in chart else "數下數模式(不配速度)"
+    print(f"✅ 轉好了：{out}（{len(chart['notes'])} 個音符, {mode}）")
     return 0
 
 

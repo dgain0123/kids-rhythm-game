@@ -3,6 +3,11 @@
 const STEM_DX = 12;   // 符桿相對符頭的水平位移
 const STEM_LEN = 60;  // 符桿長度
 
+// 音符時值(拍)：跟轉檔器 tools/mid2json.py 的 NOTE_VALUES 對齊。
+// triplet＝一拍三連音的一顆(1/3 拍)，三顆一組剛好一拍(連樑並標「3」)
+const DUR = { whole: 4, half: 2, quarter: 1, eighth: 0.5, triplet: 1 / 3, sixteenth: 0.25 };
+const durOf = (t) => DUR[t] ?? 1;
+
 // 實心符頭(color: 一般黑、打到綠、當前拍點橘；s=縮放，音符多時整體縮小)
 function drawHead(ctx, cx, cy, color = "#111", s = 1) {
   ctx.save();
@@ -39,6 +44,16 @@ function drawBeam(ctx, x1, x2, yTop, s = 1) {
   ctx.fillStyle = "#111";
   ctx.fillRect(x1, yTop, x2 - x1, Math.max(4, 7 * s));
 }
+// 三連音記號：符樑正上方的斜體「3」(告訴大家這三顆＝一拍)
+function drawTupletNum(ctx, cx, yTop, s = 1) {
+  ctx.save();
+  ctx.fillStyle = "#111";
+  ctx.font = `italic bold ${Math.round(17 * s)}px Georgia, serif`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "bottom";
+  ctx.fillText("3", cx, yTop - 4 * s);
+  ctx.restore();
+}
 
 // 螢幕能用的寬度(扣掉舞台內距)——手機窄、桌機寬
 function availWidth() {
@@ -60,7 +75,6 @@ function visibleUnits() {
 // 這份譜是否超出可視窗(超過的話遊戲迴圈要每幀重畫，讓譜面跟著進度往左捲)
 export function needsScroll(notes) {
   const list = Array.isArray(notes) ? notes : [notes];
-  const durOf = (t) => ({ whole: 4, half: 2, quarter: 1, eighth: 0.5, sixteenth: 0.25 }[t] ?? 1);
   let acc = 0;
   for (const nn of list) acc += durOf(nn.type);
   const lastStart = acc - durOf(list[list.length - 1].type);
@@ -78,8 +92,7 @@ export function drawNotes(canvas, notes, state = {}) {
   const colorOf = (i) => (hit[i] ? "#1fa96b" : i === active ? "#ff8a3d" : "#111");
   const n = list.length;
 
-  // 依「拍」定位：四分=1拍、八分=半拍 → 每拍等寬(兩個八分＝一拍＝一組)
-  const durOf = t => ({ whole: 4, half: 2, quarter: 1, eighth: 0.5, sixteenth: 0.25 }[t] ?? 1);
+  // 依「拍」定位：四分=1拍、八分=半拍、三連音=1/3拍 → 每拍等寬
   const starts = []; let acc = 0;
   for (let i = 0; i < n; i++) { starts.push(acc); acc += durOf(list[i].type); }
   // 超過一小節(4/4)就畫小節線隔開：跨小節處左右多留空間
@@ -111,11 +124,19 @@ export function drawNotes(canvas, notes, state = {}) {
 
   // 音符大小固定(跟第9關一樣大)。放不下就：桌機加寬畫布(上限=可視窗寬)、
   // 手機縮小左右邊界；再塞不下由 CSS maxWidth 均勻微縮(不會被截掉)
-  const BASE_W = 560, PPB = 64; // PPB=每拍畫幾px(第9關的密度)
+  const BASE_W = 560, PPB = 64;      // PPB=每拍畫幾px(第9關的密度)
+  const MIN_NOTE_PX = 32;            // 相鄰音符至少隔這麼多px(符頭寬約25px，不能疊在一起)
+  // 音符很密的譜(三連音=1/3拍、十六分=1/4拍)每拍要畫寬一點，符頭才不會擠成一團。
+  // 八分(0.5拍)以上算出來剛好＝PPB，舊關卡的版面完全不變。
+  let minGap = Infinity;
+  for (let i = 1; i < n; i++) minGap = Math.min(minGap, starts[i] - starts[i - 1]);
+  const ppb = minGap > 0 && isFinite(minGap) ? Math.max(PPB, MIN_NOTE_PX / minGap) : PPB;
   let margin = 75;
-  let needW = Math.round(denom * PPB + margin * 2);
-  if (needW > availWidth()) { margin = 40; needW = Math.round(denom * PPB + margin * 2); }
-  const legacy = !scrolling && needW < BASE_W; // 短譜維持置中舊版面(1~9關不變)
+  let needW = Math.round(denom * ppb + margin * 2);
+  if (needW > availWidth()) { margin = 40; needW = Math.round(denom * ppb + margin * 2); }
+  // 短譜維持置中舊版面(1~9關不變)；但舊版面的密度(置中 22%~78%)不夠寬時要改用加寬版面
+  const legacyPPB = (BASE_W * 0.56) / denom;
+  const legacy = !scrolling && needW < BASE_W && legacyPPB >= ppb - 0.5;
   const W = legacy ? BASE_W : needW;
   if (canvas.width !== W) canvas.width = W;
   if (!legacy) {
@@ -129,9 +150,10 @@ export function drawNotes(canvas, notes, state = {}) {
   const ctx = canvas.getContext("2d");
   ctx.clearRect(0, 0, W, H);
 
-  // 五線譜五條線
+  // 五線譜五條線（有三連音的譜整個下移一點，把符樑上方的「3」空間讓出來）
   const lineGap = 18;
-  const top = H / 2 - lineGap * 2;
+  const hasTuplet = list.some((nn) => nn.type === "triplet");
+  const top = H / 2 - lineGap * 2 + (hasTuplet ? 14 : 0);
   ctx.strokeStyle = "#5b6b8c";
   ctx.lineWidth = 2;
   const edge = legacy ? W * 0.10 : margin * 0.4;
@@ -184,6 +206,7 @@ export function drawNotes(canvas, notes, state = {}) {
   }
 
   // 八分音符：每「兩個一組」(一拍)打符樑，組跟組分開；落單的畫旗子(不跨小節連樑)
+  // 三連音：每「三個一組」(一拍)打符樑，符樑上方標「3」
   const yTop = cy - STEM_LEN;
   let i = 0;
   while (i < n) {
@@ -193,6 +216,14 @@ export function drawNotes(canvas, notes, state = {}) {
         drawBeam(ctx, xs[i] + STEM_DX, xs[i + 1] + STEM_DX, yTop); // 兩個一組
         i += 2;
       } else { drawFlag(ctx, xs[i], cy); i += 1; }
+    } else if (list[i].type === "triplet") {
+      let k = 1; // 同一小節內最多連三顆＝一拍
+      while (k < 3 && i + k < n && list[i + k].type === "triplet"
+             && barOf(starts[i]) === barOf(starts[i + k])) k++;
+      if (k >= 2) drawBeam(ctx, xs[i] + STEM_DX, xs[i + k - 1] + STEM_DX, yTop);
+      else drawFlag(ctx, xs[i], cy);
+      drawTupletNum(ctx, (xs[i] + xs[i + k - 1]) / 2 + STEM_DX, yTop);
+      i += k;
     } else i++;
   }
 }

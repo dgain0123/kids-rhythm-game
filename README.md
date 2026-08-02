@@ -59,7 +59,9 @@ python3 tools/mid2json.py 你的鼓.mid --bars 4 --title "第二關"
 # 只留小鼓當簡單關
 python3 tools/mid2json.py 你的鼓.mid --only snare --bars 4 -o charts/level2.json
 ```
-選項：`--only kick,snare,hihat,tom,cymbal`、`--bars N`、`--max-hits N`、`--title`、`--hint`。
+選項：`--only kick,snare,hihat,tom,cymbal`、`--bars N`、`--max-hits N`、`--title`、`--hint`、
+`--count-mode`（數下數關卡：不輸出 bpm/beat，遊戲只看打幾下、不判拍子）。
+音符時值認得四分/八分/**三連音**（`triplet`＝1/3 拍，三顆一組，譜面自動連樑並標「3」）。
 轉檔行為由 `tests/test_mid2json.py` 釘住，`tests/guard_test.py` 為守門入口（改 .py 會自動跑）。
 
 目前 `charts/level1.json` 為手寫範例：

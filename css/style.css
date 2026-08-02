@@ -86,6 +86,26 @@ html, body {
   display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
   gap: 4px;
 }
+/* 角色超過 8 隻(第19關「打12下」起)：一排最多 6 隻(手機 4 隻)，其餘換行，
+   角色與號碼牌一起縮小 → 12 隻也放得下，不會被畫面邊緣切掉 */
+#face.many {
+  flex-wrap: wrap;
+  height: auto;
+  min-height: clamp(150px, 24vw, 215px);
+  row-gap: 4px;
+  --per-row: 6;
+}
+#face.many .char-item {
+  flex: 0 0 calc((100% - (var(--per-row) - 1) * 8px) / var(--per-row));
+  min-width: 0;
+  height: clamp(84px, 13vw, 112px);
+}
+#face.many .char-media { max-width: 100%; }
+#face.many .char-num {
+  width: 30px; height: 30px; border-width: 3px; border-radius: 6px; font-size: 19px;
+}
+@media (max-width: 620px) { #face.many { --per-row: 4; } }
+
 /* 兔子耳朵很高：號碼牌放兩耳之間、偏左(絕對定位覆在圖上) */
 /* 兔子圖縮小，上方留白給「全尺寸」號碼牌(跟其他動物一樣大)，放兩耳正上方、水平對齊兩耳間隙中心 */
 .char-item.char-rabbit .char-media { max-height: 72%; }
