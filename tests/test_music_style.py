@@ -50,11 +50,33 @@ def test_styles_are_all_different():
 def test_style_has_required_parts():
     for c, st in music_style.STYLES.items():
         assert st.name and st.key and st.instruments and st.metronome, f"第{c}章風格欄位沒填齊"
-        assert len(st.prog) >= 1, f"第{c}章沒有和聲進行"
-        for seg in st.prog:
-            assert seg["chord"] and seg["bass"] and seg["hits"], f"第{c}章的和聲段缺欄位"
-            for note in list(seg["chord"]) + [seg["bass"]] + list(seg["hits"]):
-                music_style.hz(note)  # 音名要能解析成頻率
+        assert st.kind in ("synth", "track"), f"第{c}章的 kind 只能是 synth 或 track"
+        if st.kind == "synth":
+            assert len(st.prog) >= 1, f"第{c}章沒有和聲進行"
+            for seg in st.prog:
+                assert seg["chord"] and seg["bass"] and seg["hits"], f"第{c}章的和聲段缺欄位"
+                for note in list(seg["chord"]) + [seg["bass"]] + list(seg["hits"]):
+                    music_style.hz(note)  # 音名要能解析成頻率
+
+
+def test_track_styles_are_cc0_and_present():
+    """用現成曲目的章節：素材檔要在、**授權必須是 CC0/公共領域**、來源要登記。
+    (repo 是公開的，曾踩過版權坑 → 這條不可以放寬)"""
+    for c, st in music_style.STYLES.items():
+        if st.kind != "track":
+            continue
+        assert st.source, f"第{c}章沒填素材檔名"
+        path = os.path.join(PROJ, "sounds", "music", "source", st.source)
+        assert os.path.exists(path), f"第{c}章的素材不存在：{path}"
+        lic = (st.license or "").upper()
+        assert "CC0" in lic or "PUBLIC DOMAIN" in lic or "公共領域" in st.license, \
+            f"第{c}章素材授權不是 CC0/公共領域：{st.license!r}"
+        assert st.credit and st.source_url, f"第{c}章沒登記來源(credit/source_url)"
+        # 來源與授權清單也要寫進去，方便別人查
+        doc = os.path.join(PROJ, "sounds", "music", "source", "來源與授權.md")
+        assert os.path.exists(doc), "缺少 sounds/music/source/來源與授權.md"
+        assert st.source in open(doc, encoding="utf-8").read(), \
+            f"{st.source} 沒有登記在 來源與授權.md"
 
 
 def test_unknown_chapter_raises():

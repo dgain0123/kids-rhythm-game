@@ -66,6 +66,26 @@ class Mixer:
             e[:a] *= np.linspace(0, 1, a)
         return e
 
+    def noise(self, dur, seed):
+        """固定種子的白噪音(每次產生的音檔要一模一樣)。"""
+        return np.random.RandomState(seed).randn(int(dur * self.sr))
+
+    def reverb(self, decay=2.0, mix=0.3, seed=7, damp=0.35):
+        """整軌加殘響：用「指數衰減噪音」當脈衝響應做 FFT 摺積。
+        空間感是氛圍的一大半 —— 乾聲(玩具感) vs 大殘響(空靈) 差很多。"""
+        n = int(decay * self.sr)
+        t = np.arange(n) / self.sr
+        ir = np.random.RandomState(seed).randn(n) * np.exp(-t / (decay / 4.0))
+        k = max(1, int(damp * 40))          # 簡易高頻衰減(移動平均)
+        ir = np.convolve(ir, np.ones(k) / k, mode="same")
+        ir /= max(1e-9, np.max(np.abs(ir)))
+        m = len(self.buf) + n - 1
+        N = 1 << int(np.ceil(np.log2(m)))
+        wet = np.fft.irfft(np.fft.rfft(self.buf, N) * np.fft.rfft(ir, N))[:len(self.buf)]
+        wet /= max(1e-9, np.max(np.abs(wet)))
+        wet *= max(1e-9, np.max(np.abs(self.buf)))
+        self.buf = (1 - mix) * self.buf + mix * wet
+
     def finish(self, m4a_path, fade_sec=1.2, peak=0.85):
         fade = int(fade_sec * self.sr)
         self.buf[-fade:] *= np.linspace(1, 0, fade)
@@ -84,21 +104,30 @@ class Mixer:
 
 
 class Style:
-    """一個章節的音樂風格。子類別實作 hit/chord/bass/fill/click。
+    """一個章節的音樂風格。有兩種來源：
+    - kind="synth"：程式合成，子類別實作 hit/chord/bass/fill/click，用 prog 當和聲進行
+    - kind="track"：**現成 CC0 曲目**，只要填 source/license/credit/source_url，
+      合成的部分只剩節拍器 click；做音樂走 tools/track_music.py（變速對齊拍點）
 
     prog：和聲段清單，每段 {"chord": [和弦音], "bass": 低音, "hits": [拍點音循環]}
           拍點音會依序循環用（三連音關卡＝一段 3 個拍點）。
     """
 
+    kind = "synth"
     name = ""          # 風格名(顯示用)
     key = ""           # 調性
     instruments = ""   # 樂器組(一句話)
     metronome = ""     # 節拍器音色
     prog = []
+    # kind="track" 用：素材檔名(放 sounds/music/source/)與授權登記
+    source = ""
+    license = ""
+    credit = ""
+    source_url = ""
 
     def signature(self):
         """風格指紋：任兩個章節不可以一樣(由測試釘住)。"""
-        return (self.key, self.instruments, self.metronome,
+        return (self.kind, self.key, self.instruments, self.metronome, self.source,
                 tuple(tuple(s["chord"]) + (s["bass"],) for s in self.prog))
 
     # 以下由子類別實作
@@ -367,14 +396,35 @@ class PluckStyle(Style):
         mx.add(t, s * mx.env_ad(n, 0.001, 0.016) * vol)
 
 
-# 第二大關卡的候選(試聽用；選定的那個放進 STYLES)
-CANDIDATES = {"A": MusicBoxStyle(), "B": MarimbaStyle(), "C": PluckStyle()}
+# ── 第二大關卡「第一行第二小節」：現成 CC0 曲目「旋轉木馬風琴」──
+# 2026-08-03 使用者裁示：純合成的候選(音樂盒/馬林巴/撥弦)骨架都一樣、氛圍太像第一大關卡，
+# 改用現成音樂 → 從 4 首 CC0 候選(旋轉木馬/手風琴波卡/八位元/放克)試聽選定這首。
+class CarouselOrganStyle(Style):
+    kind = "track"
+    name = "旋轉木馬風琴(現成曲目)"
+    key = "原曲調性(不變調，只變速)"
+    instruments = "遊樂園旋轉木馬管風琴實錄"
+    metronome = "高音木塊(1500Hz 極短，切得過風琴)"
+    source = "carousel_cc0.mp3"
+    license = "CC0 1.0 (公共領域，免標示)"
+    credit = "Music of Carousel // Karusellin musiikkia, Linnanmäki — YleArkisto (Freesound)"
+    source_url = "https://freesound.org/people/YleArkisto/sounds/524699"
+
+    def click(self, mx, t, vol=0.42):
+        n = int(0.09 * mx.sr)
+        t2 = np.arange(n) / mx.sr
+        s = np.sin(2 * np.pi * 1500 * t2) + 0.4 * np.sin(2 * np.pi * 3400 * t2)
+        mx.add(t, s * mx.env_ad(n, 0.002, 0.022) * vol)
+
+
+# 純合成的備用風格(之後開新章節可直接用或當範本)
+CANDIDATES = {"音樂盒": MusicBoxStyle(), "馬林巴": MarimbaStyle(), "撥弦": PluckStyle()}
 
 # ★ 章節 → 音樂風格。**新增大關卡就一定要在這裡加一組不一樣的**
 #   (漏加或跟別章重複 → tests/test_music_style.py 紅 → 守門擋下)
 STYLES = {
-    1: ChimePadStyle(),     # 第一行第一小節(level9~18)
-    2: MarimbaStyle(),      # 第一行第二小節(level20~)：2026-08-02 使用者從 A/B/C 試聽選定 B
+    1: ChimePadStyle(),         # 第一行第一小節(level9~18)：程式合成
+    2: CarouselOrganStyle(),    # 第一行第二小節(level20~)：現成 CC0 曲目
 }
 
 
