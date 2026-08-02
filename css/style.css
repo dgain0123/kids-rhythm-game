@@ -393,3 +393,14 @@ button:disabled { opacity: .6; cursor: default; }
   0%,100% { transform: translateX(-50%) scale(1) rotate(-3deg); }
   50%     { transform: translateX(-50%) scale(1.08) rotate(3deg); }
 }
+
+/* 音樂出處（CC BY 要求出處要找得到）：頁尾小字，不搶畫面 */
+#credits {
+  margin: 18px auto 8px;
+  max-width: 92vw;
+  font-size: 12px;
+  color: #8890b5;
+  text-align: center;
+  line-height: 1.6;
+}
+#credits a { color: #7b86b8; }

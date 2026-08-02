@@ -124,6 +124,14 @@ class Style:
     license = ""
     credit = ""
     source_url = ""
+    # 需要標示的授權(CC BY)：這段文字一定要出現在 index.html 的出處欄
+    # (CC BY 要求「想知道音樂來源的人要找得到」)，由測試釘住
+    ui_credit = ""
+
+    def needs_attribution(self):
+        """這個素材的授權要不要在畫面上標示(CC BY 系列要，CC0/公共領域不用)。"""
+        lic = (self.license or "").upper()
+        return "BY" in lic and "CC0" not in lic
 
     def signature(self):
         """風格指紋：任兩個章節不可以一樣(由測試釘住)。"""
@@ -417,14 +425,63 @@ class CarouselOrganStyle(Style):
         mx.add(t, s * mx.env_ad(n, 0.002, 0.022) * vol)
 
 
-# 純合成的備用風格(之後開新章節可直接用或當範本)
-CANDIDATES = {"音樂盒": MusicBoxStyle(), "馬林巴": MarimbaStyle(), "撥弦": PluckStyle()}
+# ── 第二大關卡實際採用：Kevin MacLeod「Fluffing a Duck」(CC BY 4.0) ──
+# 2026-08-03 使用者聽過旋轉木馬(Freesound CC0)後說「這來源的歌曲都好難聽」——
+# Freesound 是使用者上傳的音效庫、不是為聽而做的音樂。改用 incompetech(專業配樂庫)，
+# 從 5 首候選試聽選定這首。CC BY 要標示 → ui_credit 必須顯示在 index.html(測試釘住)。
+class FluffingDuckStyle(Style):
+    kind = "track"
+    name = "Fluffing a Duck(現成曲目)"
+    key = "原曲調性(不變調，只變速)"
+    instruments = "輕快撥弦小品(木琴/撥弦/低音提琴，Kevin MacLeod)"
+    metronome = "高音木塊(1500Hz 極短)"
+    source = "fluffing_a_duck_ccby.mp3"
+    license = "CC BY 4.0 (姓名標示；incompetech 官方 FAQ 版本)"
+    credit = ("Fluffing a Duck — Kevin MacLeod (incompetech.com), "
+              "Licensed under Creative Commons: By Attribution 4.0")
+    source_url = "https://incompetech.com/music/royalty-free/index.html"
+    ui_credit = "Fluffing a Duck — Kevin MacLeod (incompetech.com)"
+
+    def click(self, mx, t, vol=0.42):
+        n = int(0.09 * mx.sr)
+        t2 = np.arange(n) / mx.sr
+        s = np.sin(2 * np.pi * 1500 * t2) + 0.4 * np.sin(2 * np.pi * 3400 * t2)
+        mx.add(t, s * mx.env_ad(n, 0.002, 0.022) * vol)
+
+
+# ── 第二大關卡最終採用：布拉姆斯搖籃曲(真正的兒歌) ──
+# 2026-08-03 使用者要「兒歌」→ 從 Jamendo(音樂人曲庫，品質遠優於 Freesound 的使用者音效)
+# 撈 CC BY 兒歌，通過對齊檢查的三首試聽後選定。**旋律本身是公共領域**(布拉姆斯 1868)，
+# 這份錄音是 CC BY 3.0 → 要標示(ui_credit 顯示在 index.html，測試釘住)。
+class BrahmsLullabyStyle(Style):
+    kind = "track"
+    name = "布拉姆斯搖籃曲(現成曲目)"
+    key = "原曲調性(不變調，完全不用變速)"
+    instruments = "搖籃曲鋼琴／音樂盒編曲(BrunoXe)"
+    metronome = "高音木塊(1500Hz 極短)"
+    source = "brahms_lullaby_ccby3.mp3"
+    license = "CC BY 3.0 (姓名標示)"
+    credit = ("Lullaby (Johannes Brahms) — BrunoXe (jamendo.com/track/379363), "
+              "Licensed under Creative Commons: By Attribution 3.0")
+    source_url = "https://www.jamendo.com/track/379363"
+    ui_credit = "Lullaby (Johannes Brahms) — BrunoXe (jamendo.com)"
+
+    def click(self, mx, t, vol=0.42):
+        n = int(0.09 * mx.sr)
+        t2 = np.arange(n) / mx.sr
+        s = np.sin(2 * np.pi * 1500 * t2) + 0.4 * np.sin(2 * np.pi * 3400 * t2)
+        mx.add(t, s * mx.env_ad(n, 0.002, 0.022) * vol)
+
+
+# 備用風格(之後開新章節可直接用或當範本)：合成三款 + 用過/試過的現成曲目
+CANDIDATES = {"音樂盒": MusicBoxStyle(), "馬林巴": MarimbaStyle(), "撥弦": PluckStyle(),
+              "旋轉木馬風琴": CarouselOrganStyle(), "Fluffing a Duck": FluffingDuckStyle()}
 
 # ★ 章節 → 音樂風格。**新增大關卡就一定要在這裡加一組不一樣的**
 #   (漏加或跟別章重複 → tests/test_music_style.py 紅 → 守門擋下)
 STYLES = {
     1: ChimePadStyle(),         # 第一行第一小節(level9~18)：程式合成
-    2: CarouselOrganStyle(),    # 第一行第二小節(level20~)：現成 CC0 曲目
+    2: BrahmsLullabyStyle(),    # 第一行第二小節(level20~)：現成兒歌 CC BY(要標示)
 }
 
 

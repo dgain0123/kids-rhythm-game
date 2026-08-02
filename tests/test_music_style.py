@@ -59,9 +59,19 @@ def test_style_has_required_parts():
                     music_style.hz(note)  # 音名要能解析成頻率
 
 
-def test_track_styles_are_cc0_and_present():
-    """用現成曲目的章節：素材檔要在、**授權必須是 CC0/公共領域**、來源要登記。
-    (repo 是公開的，曾踩過版權坑 → 這條不可以放寬)"""
+def test_track_styles_license_ok():
+    """用現成曲目的章節（repo 是公開的，曾踩過版權坑 → 這幾條不可以放寬）：
+    ① 素材檔要在、來源要登記
+    ② 授權只收 **CC0／公共領域／CC BY**
+    ③ **NC(禁商用)、ND(禁改作)、SA(相同方式分享) 一律不准**
+       ——我們會變速＝改作，ND 直接不相容；SA 會傳染到整個專案
+    ④ 需要標示的授權(CC BY)：出處字串一定要**真的顯示在 index.html 上**
+       （CC BY 要求「想知道音樂來源的人要找得到」）"""
+    doc_path = os.path.join(PROJ, "sounds", "music", "source", "來源與授權.md")
+    assert os.path.exists(doc_path), "缺少 sounds/music/source/來源與授權.md"
+    doc = open(doc_path, encoding="utf-8").read()
+    html = open(os.path.join(PROJ, "index.html"), encoding="utf-8").read()
+
     for c, st in music_style.STYLES.items():
         if st.kind != "track":
             continue
@@ -69,14 +79,19 @@ def test_track_styles_are_cc0_and_present():
         path = os.path.join(PROJ, "sounds", "music", "source", st.source)
         assert os.path.exists(path), f"第{c}章的素材不存在：{path}"
         lic = (st.license or "").upper()
-        assert "CC0" in lic or "PUBLIC DOMAIN" in lic or "公共領域" in st.license, \
-            f"第{c}章素材授權不是 CC0/公共領域：{st.license!r}"
+        ok = ("CC0" in lic or "PUBLIC DOMAIN" in lic or "公共領域" in st.license
+              or "CC BY" in lic)
+        assert ok, f"第{c}章素材授權不在白名單(CC0/公共領域/CC BY)：{st.license!r}"
+        for bad, why in [("NC", "禁商用"), ("ND", "禁改作(我們會變速=改作)"),
+                         ("SA", "相同方式分享(會傳染整個專案)")]:
+            assert f"-{bad}" not in lic and f" {bad} " not in lic, \
+                f"第{c}章素材授權含 {bad}({why})，不可以用：{st.license!r}"
         assert st.credit and st.source_url, f"第{c}章沒登記來源(credit/source_url)"
-        # 來源與授權清單也要寫進去，方便別人查
-        doc = os.path.join(PROJ, "sounds", "music", "source", "來源與授權.md")
-        assert os.path.exists(doc), "缺少 sounds/music/source/來源與授權.md"
-        assert st.source in open(doc, encoding="utf-8").read(), \
-            f"{st.source} 沒有登記在 來源與授權.md"
+        assert st.source in doc, f"{st.source} 沒有登記在 來源與授權.md"
+        if st.needs_attribution():
+            assert st.ui_credit, f"第{c}章是要標示的授權，必須填 ui_credit"
+            assert st.ui_credit in html, \
+                f"第{c}章的音樂出處沒有顯示在 index.html：{st.ui_credit!r}"
 
 
 def test_unknown_chapter_raises():
