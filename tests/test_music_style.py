@@ -104,6 +104,56 @@ def test_unknown_chapter_raises():
     raise AssertionError("沒定義風格的章節應該要丟 KeyError")
 
 
+def test_normalize_loudness_hits_target():
+    """響度正規化：拉到目標 RMS、且峰值不超過限幅天花板(留給 AAC 過衝的餘裕)。
+    用合成訊號測，不碰檔案 → 很快。"""
+    import numpy as np
+    mx = music_style.Mixer(6.0)
+    rng = np.random.RandomState(0)
+    mx.buf = rng.randn(len(mx.buf)) * 0.01          # 很小聲
+    mx.buf[::5000] = 0.9                             # 幾個大尖峰(模擬節拍器)
+    rms = mx.normalize_loudness()
+    db = 20 * np.log10(rms / music_style.TARGET_RMS)
+    assert abs(db) < 0.4, f"響度沒對齊目標：差 {db:+.2f} dB"
+    assert np.max(np.abs(mx.buf)) <= music_style.LIMIT_CEILING + 1e-6, "峰值超過限幅天花板"
+
+
+def _rms_peak(path, sr=8000, skip_head=3.0, skip_tail=2.0):
+    """用 ffmpeg 快速解碼量 RMS 與峰值（比 librosa 快很多，適合守門）。"""
+    import subprocess
+
+    import numpy as np
+    out = subprocess.run(["ffmpeg", "-v", "quiet", "-i", path, "-ac", "1",
+                          "-ar", str(sr), "-f", "s16le", "-"],
+                         capture_output=True, check=True).stdout
+    y = np.frombuffer(out, dtype="<i2").astype(float) / 32768
+    core = y[int(skip_head * sr): len(y) - int(skip_tail * sr)]
+    if len(core) < sr:
+        core = y
+    return float(np.sqrt(np.mean(core ** 2))), float(np.max(np.abs(y)))
+
+
+def test_all_level_music_loudness():
+    """**每個關卡音樂的音量都要一致**（RMS 對齊 TARGET_RMS ±2.5dB），
+    而且解碼後峰值不可以超過 1.0（AAC 過衝會破音）。
+    2026-08-03：第20關用峰值正規化，比第一大關卡小 7dB，被使用者抓到 → 改用 RMS 對齊。"""
+    import glob
+    import shutil
+
+    import numpy as np
+    if not shutil.which("ffmpeg"):
+        print("（跳過音量檢查：沒有 ffmpeg）")
+        return
+    files = sorted(glob.glob(os.path.join(PROJ, "sounds", "music", "level*.m4a")))
+    assert files, "找不到任何關卡音樂"
+    for f in files:
+        rms, peak = _rms_peak(f)
+        db = 20 * np.log10(max(rms, 1e-9) / music_style.TARGET_RMS)
+        name = os.path.basename(f)
+        assert abs(db) <= 2.5, f"{name} 音量偏離目標 {db:+.1f} dB（其他關會覺得忽大忽小）"
+        assert peak <= 1.0, f"{name} 解碼峰值 {peak:.3f} > 1.0，會破音（限幅天花板要再降）"
+
+
 def test_level20_generator_uses_chapter2_style():
     import make_level20_music as m
     assert m.CHAPTER == 2

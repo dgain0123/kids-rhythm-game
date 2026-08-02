@@ -33,6 +33,16 @@ import numpy as np
 SR = 44100
 SEMI = {"C": 0, "D": 2, "E": 4, "F": 5, "G": 7, "A": 9, "B": 11}
 
+# ★ 所有關卡音樂的目標響度（RMS，不是峰值）。
+# 量自第一大關卡 level9~18 的實測平均 -16.4 dBFS(RMS 0.152)——那是使用者聽慣的音量。
+# **一定要用 RMS 對齊、不能用峰值正規化**：峰值會被節拍器的短促尖峰佔走，
+# 動態大的現成曲目就會整首變小聲(2026-08-03 第20關實際小了 7dB 被使用者抓到)。
+TARGET_RMS = 0.152
+LIMIT_CEILING = 0.80     # 限幅天花板：留餘裕給 AAC 編碼過衝
+LIMIT_KNEE = 0.68        # 超過這個振幅才開始軟壓，底下完全不動
+AAC_BITRATE = "128000"   # 實測：天花板0.80+128k → 解碼峰值 0.97(安全)；
+                         # 0.92+96k 會解碼出 1.04、0.85+96k 出 1.01 都會破音
+
 
 def hz(name):
     """音名 → 頻率（A4=440）。例：'C4'、'Bb3'、'F#5'。"""
@@ -86,10 +96,38 @@ class Mixer:
         wet *= max(1e-9, np.max(np.abs(self.buf)))
         self.buf = (1 - mix) * self.buf + mix * wet
 
-    def finish(self, m4a_path, fade_sec=1.2, peak=0.85):
+    def loudness(self, x=None, skip_head=2.0, skip_tail=1.5):
+        """音樂段落的 RMS（跳過開頭緩衝與結尾淡出，才是真正聽到的音量）。"""
+        x = self.buf if x is None else x
+        a, b = int(skip_head * self.sr), len(x) - int(skip_tail * self.sr)
+        core = x[a:b] if b - a > self.sr else x
+        return float(np.sqrt(np.mean(core ** 2)))
+
+    def normalize_loudness(self, target_rms=TARGET_RMS,
+                           knee=LIMIT_KNEE, ceiling=LIMIT_CEILING):
+        """把整軌拉到目標響度（RMS），超過 knee 的峰值用軟膝限幅壓到 ceiling 以下。
+        跟峰值正規化的差別：動態大的曲子不會因為幾個尖峰就整首變小聲。
+        ceiling 要留餘裕給 AAC 編碼過衝(不留的話解碼會超過 1.0 破音)。"""
+        for _ in range(4):                       # 限幅會吃掉一點響度，補幾次收斂
+            cur = self.loudness()
+            if cur < 1e-9:
+                break
+            self.buf *= target_rms / cur
+            over = np.abs(self.buf) > knee
+            if over.any():                       # 軟膝：門檻以下完全不動
+                mag = np.abs(self.buf[over])
+                self.buf[over] = np.sign(self.buf[over]) * (
+                    knee + (ceiling - knee) * np.tanh((mag - knee) / (ceiling - knee)))
+            if abs(20 * np.log10(max(self.loudness(), 1e-9) / target_rms)) < 0.2:
+                break
+        np.clip(self.buf, -ceiling, ceiling, out=self.buf)
+        return self.loudness()
+
+    def finish(self, m4a_path, fade_sec=1.2, target_rms=TARGET_RMS):
         fade = int(fade_sec * self.sr)
         self.buf[-fade:] *= np.linspace(1, 0, fade)
-        x = self.buf / max(1e-9, np.max(np.abs(self.buf))) * peak
+        self.normalize_loudness(target_rms)
+        x = self.buf
         os.makedirs(os.path.dirname(m4a_path), exist_ok=True)
         wav_path = m4a_path + ".tmp.wav"
         with wave.open(wav_path, "wb") as w:
@@ -97,7 +135,7 @@ class Mixer:
             w.setsampwidth(2)
             w.setframerate(self.sr)
             w.writeframes((x * 32767).astype("<i2").tobytes())
-        subprocess.run(["afconvert", "-f", "m4af", "-d", "aac", "-b", "96000",
+        subprocess.run(["afconvert", "-f", "m4af", "-d", "aac", "-b", AAC_BITRATE,
                         wav_path, m4a_path], check=True)
         os.remove(wav_path)
         return len(self.buf) / self.sr
