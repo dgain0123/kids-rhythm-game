@@ -37,11 +37,12 @@ SEMI = {"C": 0, "D": 2, "E": 4, "F": 5, "G": 7, "A": 9, "B": 11}
 # 量自第一大關卡 level9~18 的實測平均 -16.4 dBFS(RMS 0.152)——那是使用者聽慣的音量。
 # **一定要用 RMS 對齊、不能用峰值正規化**：峰值會被節拍器的短促尖峰佔走，
 # 動態大的現成曲目就會整首變小聲(2026-08-03 第20關實際小了 7dB 被使用者抓到)。
-TARGET_RMS = 0.152
-LIMIT_CEILING = 0.80     # 限幅天花板：留餘裕給 AAC 編碼過衝
-LIMIT_KNEE = 0.68        # 超過這個振幅才開始軟壓，底下完全不動
-AAC_BITRATE = "128000"   # 實測：天花板0.80+128k → 解碼峰值 0.97(安全)；
-                         # 0.92+96k 會解碼出 1.04、0.85+96k 出 1.01 都會破音
+TARGET_RMS = 0.316       # -10.0 dBFS：對齊「完成提示音」的響度(2026-08-03 使用者要求
+                         # 「跟提示音一樣大聲」；原本 -16.4 dB 對齊第一大關卡仍嫌小聲)
+LIMIT_CEILING = 0.72     # 限幅天花板：留餘裕給 AAC 編碼過衝
+LIMIT_KNEE = 0.60        # 超過這個振幅才開始軟壓，底下完全不動
+AAC_BITRATE = "160000"   # 實測(真實浮點峰值)：天花板0.72+160k → 0.89 安全；
+                         # 0.80+128k 會過衝到 1.02 破音
 
 
 def hz(name):
@@ -103,6 +104,17 @@ class Mixer:
         core = x[a:b] if b - a > self.sr else x
         return float(np.sqrt(np.mean(core ** 2)))
 
+    def compress(self, thresh=0.10, ratio=3.0, win=0.03, smooth=0.06):
+        """溫和的壓縮：把小聲的段落抬起來、大聲的壓下去，整體才推得響又不失真。
+        (只靠限幅硬推會把動態大的曲子壓爛；母帶做法是先壓縮再限幅。)
+        thresh 以上依 ratio 壓縮；增益曲線再平滑過，避免抽吸感。"""
+        n = max(1, int(win * self.sr))
+        env = np.sqrt(np.convolve(self.buf ** 2, np.ones(n) / n, mode="same")) + 1e-9
+        gain = np.where(env > thresh, (thresh / env) ** (1 - 1.0 / ratio), 1.0)
+        m = max(1, int(smooth * self.sr))
+        gain = np.convolve(gain, np.ones(m) / m, mode="same")
+        self.buf *= gain
+
     def normalize_loudness(self, target_rms=TARGET_RMS,
                            knee=LIMIT_KNEE, ceiling=LIMIT_CEILING):
         """把整軌拉到目標響度（RMS），超過 knee 的峰值用軟膝限幅壓到 ceiling 以下。
@@ -125,7 +137,9 @@ class Mixer:
 
     def finish(self, m4a_path, fade_sec=1.2, target_rms=TARGET_RMS):
         fade = int(fade_sec * self.sr)
-        self.buf[-fade:] *= np.linspace(1, 0, fade)
+        if fade > 0:
+            self.buf[-fade:] *= np.linspace(1, 0, fade)
+        self.compress()                      # 先壓縮(抬小聲處)再推響度，才不會壓爛
         self.normalize_loudness(target_rms)
         x = self.buf
         os.makedirs(os.path.dirname(m4a_path), exist_ok=True)

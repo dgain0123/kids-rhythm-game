@@ -141,17 +141,12 @@ def main():
     wav_path = os.path.join(out_dir, "_level12_tmp.wav")
     m4a_path = os.path.join(out_dir, "level12.m4a")
 
-    x = buf / max(1e-9, np.max(np.abs(buf))) * 0.85
-    pcm = (x * 32767).astype("<i2")
-    with wave.open(wav_path, "wb") as w:
-        w.setnchannels(1)
-        w.setsampwidth(2)
-        w.setframerate(SR)
-        w.writeframes(pcm.tobytes())
-
-    subprocess.run(["afconvert", "-f", "m4af", "-d", "aac", "-b", "96000",
-                    wav_path, m4a_path], check=True)
-    os.remove(wav_path)
+    # 音量交給 music_style 的母帶處理（壓縮→響度對齊→限幅），不要自己做峰值正規化：
+    # 峰值會被節拍器的短促尖峰佔走，整首就變小聲（2026-08-03 的教訓，見 docs/關卡音樂.md）
+    from music_style import Mixer
+    mx = Mixer(TOTAL, SR)
+    mx.buf = buf
+    mx.finish(m4a_path, fade_sec=0.0)   # 淡出前面已經做過
     print(f"✅ 音樂做好了：{m4a_path}（{TOTAL:.1f} 秒）")
     return 0
 

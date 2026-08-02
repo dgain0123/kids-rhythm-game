@@ -154,6 +154,17 @@ def test_all_level_music_loudness():
         assert peak <= 1.0, f"{name} 解碼峰值 {peak:.3f} > 1.0，會破音（限幅天花板要再降）"
 
 
+def test_generators_use_shared_mastering():
+    """所有音樂產生器都要走 music_style 的母帶處理，**不可以自己做峰值正規化**
+    （峰值會被節拍器尖峰佔走 → 整首變小聲）。"""
+    import glob
+    for p in sorted(glob.glob(os.path.join(PROJ, "tools", "make_level*_music.py"))):
+        src = open(p, encoding="utf-8").read()
+        name = os.path.basename(p)
+        assert "np.max(np.abs(buf))" not in src, f"{name} 還在自己做峰值正規化"
+        assert "mx.finish(" in src or "render(" in src, f"{name} 沒有走共用的母帶處理/管線"
+
+
 def test_level20_generator_uses_chapter2_style():
     import make_level20_music as m
     assert m.CHAPTER == 2
