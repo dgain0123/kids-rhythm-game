@@ -154,6 +154,30 @@ def test_all_level_music_loudness():
         assert peak <= 1.0, f"{name} 解碼峰值 {peak:.3f} > 1.0，會破音（限幅天花板要再降）"
 
 
+def test_sfx_loudness_matches_music():
+    """過關歡呼／失敗音效要跟關卡音樂差不多大聲（用「響段響度」比，短爆發音效才準），
+    而且峰值不可以破表。2026-08-03：失敗音效原本比音樂小 8.8dB、歡呼小 3.7dB。
+    ⚠️ 量立體聲要用 (L+R)/2，`ffmpeg -ac 1` 的降混會相加、量出來偏大。"""
+    import shutil
+    import sys
+
+    import numpy as np
+    if not shutil.which("ffmpeg") or not shutil.which("ffprobe"):
+        print("（跳過音效音量檢查：沒有 ffmpeg）")
+        return
+    sys.path.insert(0, os.path.join(PROJ, "tools"))
+    import remaster_sfx as rs
+    for name in rs.FILES:
+        path = os.path.join(PROJ, "sounds", name)
+        if not os.path.exists(path):
+            continue
+        sr, ch = rs.probe(path)
+        x = rs.decode(path, sr, ch)
+        db = 20 * np.log10(max(rs.loud_segment(x, sr), 1e-9) / rs.TARGET_SFX_LOUD)
+        assert abs(db) <= 2.5, f"{name} 響度偏離音樂 {db:+.1f} dB（跑 tools/remaster_sfx.py）"
+        assert np.max(np.abs(x)) <= 1.0, f"{name} 峰值破表會失真"
+
+
 def test_generators_use_shared_mastering():
     """所有音樂產生器都要走 music_style 的母帶處理，**不可以自己做峰值正規化**
     （峰值會被節拍器尖峰佔走 → 整首變小聲）。"""
