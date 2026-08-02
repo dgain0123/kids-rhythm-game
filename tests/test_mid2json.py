@@ -177,6 +177,25 @@ def test_count_mode_no_timing():
         os.remove(path)
 
 
+def test_triplet_timed_level():
+    """第20關(三連音跟拍關卡)：同一份 MIDI 不開 count_mode → 要有 bpm/beat，
+    拍點時間＝每 2 秒一下(BPM10 的 1/3 拍)，容許 1/3 拍＝±2 秒。"""
+    path = _make_midi([(i / 3.0, 38, 0.325) for i in range(12)], bpm=10, is_drum=False)
+    try:
+        chart = mid2json.convert(path, tolerance=0.3333, metronome="triplet",
+                                 music="./sounds/music/level20.m4a",
+                                 lead_in=9, pre_roll=1)
+        assert chart["bpm"] == 10.0
+        assert chart["metronome"] == "triplet"
+        assert chart["leadInSec"] == 9
+        spb = 60.0 / chart["bpm"]
+        times = [n["beat"] * spb for n in chart["notes"]]
+        assert all(abs(t - 2.0 * i) < 0.01 for i, t in enumerate(times)), times
+        assert abs(chart["toleranceBeats"] * spb - 2.0) < 0.01  # 1/3 拍 = 2 秒
+    finally:
+        os.remove(path)
+
+
 if __name__ == "__main__":
     for name, fn in sorted(globals().items()):
         if name.startswith("test_") and callable(fn):

@@ -1,0 +1,73 @@
+{
+  "title": "速度10",
+  "bpm": 10.0,
+  "maxHits": 12,
+  "notes": [
+    {
+      "type": "triplet",
+      "drum": "snare",
+      "beat": 0.0
+    },
+    {
+      "type": "triplet",
+      "drum": "snare",
+      "beat": 0.333
+    },
+    {
+      "type": "triplet",
+      "drum": "snare",
+      "beat": 0.667
+    },
+    {
+      "type": "triplet",
+      "drum": "snare",
+      "beat": 1.0
+    },
+    {
+      "type": "triplet",
+      "drum": "snare",
+      "beat": 1.333
+    },
+    {
+      "type": "triplet",
+      "drum": "snare",
+      "beat": 1.667
+    },
+    {
+      "type": "triplet",
+      "drum": "snare",
+      "beat": 2.0
+    },
+    {
+      "type": "triplet",
+      "drum": "snare",
+      "beat": 2.333
+    },
+    {
+      "type": "triplet",
+      "drum": "snare",
+      "beat": 2.667
+    },
+    {
+      "type": "triplet",
+      "drum": "snare",
+      "beat": 3.0
+    },
+    {
+      "type": "triplet",
+      "drum": "snare",
+      "beat": 3.333
+    },
+    {
+      "type": "triplet",
+      "drum": "snare",
+      "beat": 3.667
+    }
+  ],
+  "hint": "跟著音樂打鼓！三個一組，一共12下～",
+  "toleranceBeats": 0.3333,
+  "music": "./sounds/music/level20.m4a",
+  "leadInSec": 9.0,
+  "metronome": "triplet",
+  "preRollSec": 1.0
+}
