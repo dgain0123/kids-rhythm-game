@@ -218,6 +218,65 @@ def test_timed_charts_have_existing_music():
         assert os.path.exists(path), f"{name} 的音樂檔不存在：{chart['music']}"
 
 
+def test_material_bar_is_multiple_of_hit():
+    """**音樂素材的一小節長度，一定要是拍點間隔的整數倍**（產生器的 BAR ÷ HIT ＝整數）。
+
+    小節線落在拍點上，整首才對得齊；不是整數倍的話會愈跑愈偏。
+    這條在「素材不照拍點間隔重 render」時特別容易破功——
+    第22關就是：照原規矩一小節＝一個拍點會變成 270BPM，使用者聽了說太趕，
+    改成**一小節＝3 個拍點(90BPM)**；只要仍是整數倍，對齊就照樣精準
+    （做法見 tools/track_music.py 的 `source_hit`）。
+    """
+    import glob
+    import importlib
+    for p in sorted(glob.glob(os.path.join(PROJ, "tools", "make_level*_music.py"))):
+        mod = importlib.import_module(os.path.basename(p)[:-3])
+        hit, bar = getattr(mod, "HIT", None), getattr(mod, "BAR", None)
+        if hit is None or bar is None:
+            continue                       # 沒有分開兩個概念的關卡＝一小節就是一個拍點
+        k = bar / hit
+        assert abs(k - round(k)) < 1e-6 and round(k) >= 1, (
+            f"{os.path.basename(p)}：一小節 {bar:g} 秒不是拍點間隔 {hit:g} 秒的整數倍"
+            f"（{k:.4f} 倍）——小節線會落在拍點之間，整首愈跑愈偏")
+        st = getattr(mod, "STYLE", None)
+        if st is not None and getattr(st, "aligned_render", False):
+            src = os.path.join(PROJ, "sounds", "music", "source", st.source_for(bar))
+            assert os.path.exists(src), (
+                f"{os.path.basename(p)} 要的素材不存在：{src}"
+                f"（重做：python3 tools/make_lullaby_render.py --hit {bar:g} --bars N）")
+
+
+def test_music_outlasts_last_note_window():
+    """音樂一定要放完最後一顆音符的**整個容許窗**才結束。
+
+    音樂放完還有沒打到的音符 → 遊戲直接判失敗（見 docs/關卡系統.md 判定），
+    所以「音樂長度 ≥ 最後一下 + 容許值」不成立的話，小朋友打在容許窗後半段
+    根本來不及被算到。做新關卡最容易漏的就是這條（tail 給太短、lead-in 算錯）。
+    """
+    import glob
+    import shutil
+    import subprocess
+    if not shutil.which("ffprobe"):
+        print("（跳過音樂長度檢查：沒有 ffprobe）")
+        return
+    margin = 0.5                                  # 再留半秒給收尾淡出
+    for path in sorted(glob.glob(os.path.join(PROJ, "charts", "level*.json"))):
+        chart = json.load(open(path, encoding="utf-8"))
+        if "music" not in chart or "bpm" not in chart:
+            continue                              # 數下數關卡不判拍子
+        name = os.path.basename(path)
+        spb = 60.0 / chart["bpm"]
+        last = chart.get("leadInSec", 0) + chart["notes"][-1]["beat"] * spb
+        tol = chart.get("toleranceBeats", 0.5) * spb
+        music = os.path.join(PROJ, chart["music"].lstrip("./"))
+        dur = float(subprocess.run(
+            ["ffprobe", "-v", "quiet", "-show_entries", "format=duration",
+             "-of", "csv=p=0", music], capture_output=True, text=True, check=True).stdout)
+        assert dur >= last + tol + margin, (
+            f"{name} 的音樂只有 {dur:.2f} 秒，最後一下在 {last:.2f} 秒、容許 ±{tol:.2f} 秒"
+            f"——音樂放完容許窗還沒關，會誤判失敗（產生器的 tail 要加長）")
+
+
 if __name__ == "__main__":
     for fn_name, fn in sorted(globals().items()):
         if fn_name.startswith("test_") and callable(fn):

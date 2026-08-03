@@ -3,13 +3,17 @@
 
 規矩見 docs/關卡音樂.md 路線③。要點：
 - 旋律＝布拉姆斯搖籃曲（1868，**公共領域**）；編曲與 MIDI 都是本專案自己寫的 → 零第三方權利。
-- 寫成 3/4，**一小節 = 該關的一個拍點**（速度10→一小節2秒=90BPM；速度20→1秒=180BPM），
+- 寫成 3/4，**一小節 = 拍點間隔的整數倍**（速度10→一小節2秒=90BPM；速度20→1秒=180BPM），
   所以 render 出來本來就對齊拍點，不用偵測也不用變速。
+  ★**關卡再快就不要照著加速**：速度30 若照「一小節＝一個拍點」會變 270BPM，
+  使用者聽過說太趕（2026-08-03）→ 改成一小節＝**3 個**拍點，直接沿用 90BPM 那份素材。
+  （整數倍是硬條件，不然小節線落在拍點之間；規矩見 docs/關卡音樂_做法詳解.md 路線③）
 - `fluidsynth -R 0 -C 0` 關掉殘響與和聲效果 → **完全乾聲**（跟第一大關卡一樣乾淨）。
 
-用法：
-    python3 tools/make_lullaby_render.py --hit 2 --bars 13     # 速度10 用
-    python3 tools/make_lullaby_render.py --hit 1 --bars 25     # 速度20 用
+用法（--hit 填**一小節的秒數**）：
+    python3 tools/make_lullaby_render.py --hit 2 --bars 13     # 速度10 用(一小節=1個拍點)
+    python3 tools/make_lullaby_render.py --hit 1 --bars 25     # 速度20 用(一小節=1個拍點)
+    # 速度30 不用重做：一小節=3個拍點 → 沿用上面 --hit 2 那份
 產出：midi/搖籃曲_第二大關卡_hit<H>s.mid、sounds/music/source/lullaby_marimba_hit<H>s.wav
 
 音色庫（31MB，不進 repo，見 .gitignore）：
@@ -87,8 +91,9 @@ def build(hit_sec, n_bars, out_mid, out_wav):
 
 def main(argv=None):
     ap = argparse.ArgumentParser()
-    ap.add_argument("--hit", type=float, required=True, help="該關的拍點間隔(秒)")
-    ap.add_argument("--bars", type=int, required=True, help="要幾小節(＝要幾個拍點)")
+    ap.add_argument("--hit", type=float, required=True,
+                    help="素材一小節的秒數(＝關卡拍點間隔的整數倍)")
+    ap.add_argument("--bars", type=int, required=True, help="要幾小節")
     a = ap.parse_args(argv)
     tag = f"{a.hit:g}"
     out_mid = os.path.join(PROJ, "midi", f"搖籃曲_第二大關卡_hit{tag}s.mid")

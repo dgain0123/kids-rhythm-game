@@ -122,16 +122,23 @@ def pick_rate(period, hit_sec):
 
 
 def render(style, hit_sec, n_hits, out_path, lead_hits=4, pre=1.0, tail=4.0,
-           music_gain=0.55, voice_gain=0.30, sr=SR, max_drift=0.08):
+           music_gain=0.55, voice_gain=0.30, sr=SR, max_drift=0.08, source_hit=None):
     """做出一關的音樂檔。回傳 (總長秒, 說明字串)。
     style：章節風格(要有 source 檔名與 click 節拍器音色)。
     voice_gain 預設 0.40＝實測讓預備拍音量跟第一大關卡一致(-18.8dB)：**人聲推太大(曾設 0.85)，母帶壓縮會把
     edge-tts 人聲本身的 mp3 編碼雜訊放出來**，使用者聽得出來(2026-08-03)。
     hit_sec：該關的拍點間隔；n_hits：要打幾下。
 
+    source_hit：**素材的小節長度(秒)**，預設＝hit_sec(一小節＝一個拍點)。
+    關卡越快、素材照著變快就會變得又急又吵（速度30 照算是 270BPM，使用者打槍），
+    這時改成**一小節＝好幾個拍點**：填 source_hit＝小節長度即可。
+    ⚠️ **一定要是 hit_sec 的整數倍**，不然小節線就落不在拍點上、整首會慢慢跑掉
+    （由 tests/test_music_style.py 釘住）。
+
     style.aligned_render=True（**自製 MIDI 用 SoundFont render 出來的素材**）時：
     我們自己決定的速度，本來就精準對齊拍點 → 跳過偵測與變速，直接把音樂放在第一個拍點上。"""
-    name = style.source_for(hit_sec) if hasattr(style, "source_for") else style.source
+    name = (style.source_for(source_hit or hit_sec)
+            if hasattr(style, "source_for") else style.source)
     src = os.path.join(SOURCE_DIR, name)
     y, _ = librosa.load(src, sr=sr, mono=True)
 
