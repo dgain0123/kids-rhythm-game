@@ -229,17 +229,10 @@ export function drawNotes(canvas, notes, state = {}) {
 }
 
 // ── 太鼓達人式軌道（跟拍關卡用）──
-// 幾何常數放這裡當單一真相：**譜面的橘色高亮要跟「圖示進判定圈」同步**，
-// 所以高亮窗口由 laneHitWindowSec 用同一組常數算出來（2026-08-03 使用者要求）。
+// 軌道幾何常數(集中放這裡，畫圈圈/圖示/捲動速度共用同一組數字)
 const LANE_R = 36;        // 判定圈半徑
 const LANE_SPRITE = 62;   // 跑動圖示邊長
 const LANE_SPEED = 0.45;  // 一個音符間隔 = 0.45 個畫面寬
-
-// 圖示與判定圈重疊的「半窗」秒數：|t - 音符時間| 小於它，圖示就在圈圈裡
-export function laneHitWindowSec(laneWidth, ioi) {
-  const pps = (Math.max(1, laneWidth) * LANE_SPEED) / Math.max(1e-6, ioi);
-  return (LANE_R + LANE_SPRITE / 2) / pps;
-}
 
 // 角色圖示從右往左跑，跑進左邊的判定圈時打鼓。
 // 參數：t=譜面時間(秒)、noteTimes=各音符時間、hit=各音符是否已打到、
