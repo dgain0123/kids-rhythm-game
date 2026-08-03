@@ -142,7 +142,8 @@ class Mixer:
         self.compress()                      # 先壓縮(抬小聲處)再推響度，才不會壓爛
         self.normalize_loudness(target_rms)
         x = self.buf
-        os.makedirs(os.path.dirname(m4a_path), exist_ok=True)
+        if os.path.dirname(m4a_path):
+            os.makedirs(os.path.dirname(m4a_path), exist_ok=True)
         wav_path = m4a_path + ".tmp.wav"
         with wave.open(wav_path, "wb") as w:
             w.setnchannels(1)
@@ -525,15 +526,43 @@ class BrahmsLullabyStyle(Style):
         mx.add(t, s * mx.env_ad(n, 0.002, 0.022) * vol)
 
 
+# ── 第二大關卡最終採用：自製兒歌 MIDI ＋ SoundFont render（完全乾聲、零授權風險）──
+# 2026-08-03 AI 會議室 5 人一致決議(記錄/會議_20260803_0932.md)：
+# 現成錄音都有房間殘響、達不到「跟第一大關一樣乾淨」；土砲正弦合成又音色廉價。
+# 解法＝**公共領域兒歌旋律自己寫成 MIDI ＋ 免費專業取樣音源(GeneralUser GS) 離線 render**
+# (fluidsynth -R 0 -C 0 關殘響/和聲效果)。旋律是布拉姆斯搖籃曲(1868, 公共領域)，
+# 編曲與 MIDI 都是我們自己寫的 → 連第三方編曲權利都沒有。
+class LullabyMarimbaStyle(Style):
+    kind = "track"
+    aligned_render = True      # 自製素材：速度本來就對齊拍點，不必偵測/變速
+    name = "布拉姆斯搖籃曲・木琴馬林巴(自製 render)"
+    key = "C 大調 3/4 華爾滋(90BPM，一小節＝一個拍點)"
+    instruments = "馬林巴取樣音源(GeneralUser GS)：旋律＋分解和弦＋低音"
+    metronome = "高音木塊(1500Hz 極短)"
+    source = "lullaby_marimba_render.wav"
+    license = "公共領域旋律(布拉姆斯 1868)＋自製編曲；音源 GeneralUser GS 允許自由使用含商用"
+    credit = ("Lullaby (Brahms, public domain melody) — 自製 MIDI 編曲，"
+              "以 GeneralUser GS SoundFont (S. Christian Collins) 離線 render")
+    source_url = "https://github.com/mrbumpy409/GeneralUser-GS"
+    ui_credit = "布拉姆斯搖籃曲（公共領域）· 音源 GeneralUser GS"
+
+    def click(self, mx, t, vol=0.42):
+        n = int(0.09 * mx.sr)
+        t2 = np.arange(n) / mx.sr
+        s = np.sin(2 * np.pi * 1500 * t2) + 0.4 * np.sin(2 * np.pi * 3400 * t2)
+        mx.add(t, s * mx.env_ad(n, 0.002, 0.022) * vol)
+
+
 # 備用風格(之後開新章節可直接用或當範本)：合成三款 + 用過/試過的現成曲目
 CANDIDATES = {"音樂盒": MusicBoxStyle(), "馬林巴": MarimbaStyle(), "撥弦": PluckStyle(),
-              "旋轉木馬風琴": CarouselOrganStyle(), "Fluffing a Duck": FluffingDuckStyle()}
+              "旋轉木馬風琴": CarouselOrganStyle(), "Fluffing a Duck": FluffingDuckStyle(),
+              "布拉姆斯搖籃曲(實錄)": BrahmsLullabyStyle()}
 
 # ★ 章節 → 音樂風格。**新增大關卡就一定要在這裡加一組不一樣的**
 #   (漏加或跟別章重複 → tests/test_music_style.py 紅 → 守門擋下)
 STYLES = {
     1: ChimePadStyle(),         # 第一行第一小節(level9~18)：程式合成
-    2: BrahmsLullabyStyle(),    # 第一行第二小節(level20~)：現成兒歌 CC BY(要標示)
+    2: LullabyMarimbaStyle(),   # 第一行第二小節(level20~)：自製兒歌MIDI+SoundFont(乾聲)
 }
 
 

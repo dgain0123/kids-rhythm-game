@@ -85,6 +85,24 @@ def estimate_period(y, sr, lo=0.25, hi=1.6, hop=HOP):
     return float(period), float(contrast), float(phase), env, fps
 
 
+def de_space(y, sr, amount=0.0, thresh=0.18, win=0.015, smooth=0.025):
+    """去空間感（向下擴張）：把音符**之間**的殘響尾巴壓掉，聽起來就乾淨、貼近乾聲。
+
+    現成錄音的房間殘響是烤在檔案裡的，去不掉但可以「壓小」——
+    門檻以下的訊號（＝尾巴、房間音）依比例衰減，門檻以上（＝音符本身）完全不動。
+    amount 0＝不處理、0.5＝中等、1.0＝很乾（比例 1:3）。
+    ⚠️ 只能用在音樂本身，別套到人聲/節拍器（那些本來就是乾的）。"""
+    if amount <= 0:
+        return y
+    ratio = 1.0 + 2.0 * min(1.0, amount)          # 1.0~3.0
+    n = max(1, int(win * sr))
+    env = np.sqrt(np.convolve(y ** 2, np.ones(n) / n, mode="same")) + 1e-9
+    gain = np.where(env < thresh, (env / thresh) ** (ratio - 1.0), 1.0)
+    m = max(1, int(smooth * sr))
+    gain = np.convolve(gain, np.ones(m) / m, mode="same")
+    return y * gain
+
+
 def pick_rate(period, hit_sec):
     """選『一個遊戲拍點 = N 拍』與變速倍率 rate。
     rate = 原拍長 / 目標拍長；>1 = 音樂要加快、<1 = 要放慢。"""
@@ -107,9 +125,27 @@ def render(style, hit_sec, n_hits, out_path, lead_hits=4, pre=1.0, tail=4.0,
            music_gain=0.55, voice_gain=0.85, sr=SR, max_drift=0.08):
     """做出一關的音樂檔。回傳 (總長秒, 說明字串)。
     style：章節風格(要有 source 檔名與 click 節拍器音色)。
-    hit_sec：該關的拍點間隔；n_hits：要打幾下。"""
+    hit_sec：該關的拍點間隔；n_hits：要打幾下。
+
+    style.aligned_render=True（**自製 MIDI 用 SoundFont render 出來的素材**）時：
+    我們自己決定的速度，本來就精準對齊拍點 → 跳過偵測與變速，直接把音樂放在第一個拍點上。"""
     src = os.path.join(SOURCE_DIR, style.source)
     y, _ = librosa.load(src, sr=sr, mono=True)
+
+    if getattr(style, "aligned_render", False):
+        span = pre + (lead_hits + n_hits) * hit_sec
+        mx = Mixer(span + tail, sr)
+        t0 = pre + lead_hits * hit_sec          # 音樂從第一個拍點開始(預備拍只有人聲+節拍器)
+        seg = y[: int((len(mx.buf) / sr - t0) * sr)]
+        mx.buf[int(t0 * sr): int(t0 * sr) + len(seg)] += seg * music_gain
+        for k, (v, on) in enumerate(count_voices(sr)):
+            i = max(0, int((pre + k * hit_sec - on) * sr))
+            mx.buf[i:i + len(v)] += v[: len(mx.buf) - i] * voice_gain
+        for k in range(lead_hits + n_hits):
+            style.click(mx, pre + k * hit_sec, vol=0.30 if k < lead_hits else 0.42)
+        secs = mx.finish(out_path)
+        return secs, (f"素材 {style.source}：自製 MIDI＋SoundFont render(乾聲)，"
+                      f"速度本來就對齊拍點 → 不偵測、不變速；音樂自 {t0:.0f} 秒進場")
 
     period, contrast0, _, _, _ = estimate_period(y, sr)
     if contrast0 < 1.20:
