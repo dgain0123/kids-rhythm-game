@@ -4,21 +4,20 @@
 第22關（第二大關卡第4關）：BPM 30、**十二組三連音 + 1 個四分音符**共 37 下，
 每 2/3 秒打一下（1/3 拍）。音樂＝第二大關卡的章節風格（自製搖籃曲 MIDI＋SoundFont，乾聲）。
 
-★素材選擇（2026-08-03 使用者裁示）：照原規矩「一小節＝一個拍點」算出來是 **270BPM**，
-  使用者聽過說**太趕**→ 這關改成 **一小節＝3 個拍點**（BAR = 3 × HIT = 2 秒 = **90BPM**，
-  跟速度10 同一個速度感），拍點就落在馬林巴的每一拍上、對齊照樣精準。
-  所以素材直接沿用速度10 的 `lullaby_marimba_hit2s.wav`（3/4 90BPM、一小節 2 秒）。
+★素材速度（2026-08-03 使用者裁示）：整章統一成 **「一拍＝一個拍點」**——
+  音樂速度＝關卡速度的 3 倍（速度10→30BPM、速度20→60BPM、速度30→**90BPM**）。
+  本關 BAR = 3 × HIT = 2 秒 = 90BPM。照原規矩「一小節＝一個拍點」會是 270BPM，
+  使用者聽過說**太趕**（也是這一輪把整章都改掉的起點）。
 
 結構（總長 32.3 秒，對齊 charts/level22.json）：
     0–1s          開頭靜音緩衝(preRollSec)
     1–3.67s       預備拍：英文人聲數拍 one/two/three/four
                   （每 2/3 秒一聲＝拍點間隔，純人聲不疊節拍器）
-    3.67–29.67s   音樂進場（13 小節×2 秒＝26 秒），37 個拍點每 2/3 秒一下，
-                  每個拍點一聲木魚
-    29.67–32.3s   收尾（素材放完，跟第20/21關一樣淡出）
+    3.67–32.3s    音樂進場（15 小節×2 秒＝30 秒），37 個拍點每 2/3 秒一下，
+                  每個拍點一聲木魚；最後一下在 27.67 秒，之後音樂繼續放到淡出
 
 用法：python3 tools/make_level22_music.py
-（素材已存在；要重做：python3 tools/make_lullaby_render.py --hit 2 --bars 13）
+（素材重做：python3 tools/make_lullaby_render.py --hit 2 --bars 15）
 """
 import os
 import sys
@@ -28,7 +27,7 @@ from track_music import render
 
 CHAPTER = 2
 HIT = 2 / 3         # 拍點間隔 2/3 秒(= BPM 30 的 1/3 拍)
-BAR = 2.0           # 素材一小節的秒數 = 3 個拍點(必須是 HIT 的整數倍，見 track_music.render)
+BAR = 3 * HIT       # 素材一小節 2 秒 = 90BPM 3/4；一下＝一拍(見 track_music.render 的 source_hit)
 PRE = 1.0
 LEAD_HITS = 4       # 預備拍 4 聲(間隔＝拍點間隔，速度50以下的規矩)
 N_HITS = 37
@@ -47,7 +46,7 @@ def main():
     print(f"   {info}")
     print(f"   預備拍 {LEAD_IN:.3f} 秒，{N_HITS} 個拍點每 {HIT:.3f} 秒一下，"
           f"最後一下在 {LEAD_IN + (N_HITS - 1) * HIT:.2f} 秒")
-    print(f"   素材一小節 {BAR:g} 秒 = {round(BAR / HIT)} 個拍點（90BPM，270BPM 太趕）")
+    print(f"   素材一小節 {BAR:g} 秒（{180 / BAR:.0f}BPM 3/4），一拍＝一個拍點")
     return 0
 
 

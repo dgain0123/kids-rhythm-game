@@ -133,12 +133,27 @@ def _rms_peak(path, sr=44100, skip_head=3.0, skip_tail=2.0):
     core = y[int(skip_head * sr): len(y) - int(skip_tail * sr)]
     if len(core) < sr:
         core = y
-    return float(np.sqrt(np.mean(core ** 2))), float(np.max(np.abs(y)))
+    return float(np.sqrt(np.mean(core ** 2))), float(np.max(np.abs(y))), _loud_segment(core, sr)
+
+
+def _loud_segment(x, sr, frame=0.4):
+    """**響段響度**：0.4 秒一格的 RMS，取最響的 1/4 平均（跟 remaster_sfx 同一套量法）。
+
+    比較各關音量要用這個、不能用整段平均 RMS：慢關卡的音樂音符之間本來就有空白
+    （第20關 30BPM 一拍 2 秒），整段平均會被空白拉低 5dB，可是**每顆音符一樣響**——
+    小朋友聽到的是音符的音量，不是含空白的平均（2026-08-03 實測：整段 RMS 差 5.3dB、
+    響段差只有 2.5dB）。"""
+    import numpy as np
+    n = max(1, int(frame * sr))
+    frames = [np.sqrt(np.mean(x[i:i + n] ** 2)) for i in range(0, max(1, len(x) - n), n)]
+    frames = np.array(frames) if frames else np.array([np.sqrt(np.mean(x ** 2))])
+    return float(np.mean(np.sort(frames)[-max(1, len(frames) // 4):]))
 
 
 def test_all_level_music_loudness():
     """所有關卡音樂：**只調音量、完全不壓縮**（2026-08-03 使用者裁示）→
-    ① 彼此音量要一致（RMS 最大差 ≤3dB，不然換關會忽大忽小）
+    ① 彼此音量要一致（**響段響度**最大差 ≤3dB，不然換關會忽大忽小；
+       為什麼不用整段 RMS 見 `_loud_segment`）
     ② 動態要保住（crest factor ≥10dB；壓縮過的會掉到 6~7dB，這條就是防壓縮復辟）
     ③ 解碼峰值 ≤1.0（AAC 過衝會破音）"""
     import glob
@@ -152,16 +167,16 @@ def test_all_level_music_loudness():
     assert files, "找不到任何關卡音樂"
     levels = []
     for f in files:
-        rms, peak = _rms_peak(f)
+        rms, peak, loud = _rms_peak(f)
         name = os.path.basename(f)
-        db = 20 * np.log10(max(rms, 1e-9))
+        db = 20 * np.log10(max(loud, 1e-9))
         crest = 20 * np.log10(peak / max(rms, 1e-9))
-        levels.append((name, db))
+        levels.append((name, round(db, 1)))
         assert peak <= 1.0, f"{name} 解碼峰值 {peak:.3f} > 1.0，會破音"
         assert crest >= 10.0, (f"{name} 動態只剩 {crest:.1f}dB（<10）——"
                                f"八成又被壓縮了，母帶要走 clean 模式")
     spread = max(d for _, d in levels) - min(d for _, d in levels)
-    assert spread <= 3.0, f"各關音量差 {spread:.1f}dB（>3）：{levels}"
+    assert spread <= 3.0, f"各關響段音量差 {spread:.1f}dB（>3）：{levels}"
 
 
 def test_sfx_loudness_matches_music():
@@ -218,32 +233,44 @@ def test_timed_charts_have_existing_music():
         assert os.path.exists(path), f"{name} 的音樂檔不存在：{chart['music']}"
 
 
-def test_material_bar_is_multiple_of_hit():
-    """**音樂素材的一小節長度，一定要是拍點間隔的整數倍**（產生器的 BAR ÷ HIT ＝整數）。
+def test_material_tempo_follows_hit():
+    """**音樂素材的速度要跟關卡拍點綁在一起**（產生器的 BAR 與 HIT 的關係）。
 
-    小節線落在拍點上，整首才對得齊；不是整數倍的話會愈跑愈偏。
-    這條在「素材不照拍點間隔重 render」時特別容易破功——
-    第22關就是：照原規矩一小節＝一個拍點會變成 270BPM，使用者聽了說太趕，
-    改成**一小節＝3 個拍點(90BPM)**；只要仍是整數倍，對齊就照樣精準
-    （做法見 tools/track_music.py 的 `source_hit`）。
+    ① 自製 render 的章節（`aligned_render`，目前第2大關卡的搖籃曲）：
+       **一拍＝一個拍點**，也就是 `BAR = beats_per_bar × HIT`。
+       ——2026-08-03 使用者裁示。原本是「一小節＝一個拍點」，結果音樂速度＝關卡速度×小節拍數，
+       速度30 算出來 270BPM「太趕」；只改那一關又變成「速度10 的音樂比速度30 還快」，
+       使用者說很奇怪。現在整章統一：音樂速度＝關卡速度×3（30/60/90BPM），
+       小朋友每打一下就是馬林巴的一拍，慢的關卡音樂就真的比較慢。
+    ② 其他章節（自己合成的）：一小節至少要是拍點間隔的整數倍，
+       否則小節線落在拍點之間、整首愈跑愈偏。
+    素材檔本身也要真的在（做法見 tools/track_music.py 的 `source_hit`）。
     """
     import glob
     import importlib
     for p in sorted(glob.glob(os.path.join(PROJ, "tools", "make_level*_music.py"))):
-        mod = importlib.import_module(os.path.basename(p)[:-3])
+        name = os.path.basename(p)
+        mod = importlib.import_module(name[:-3])
         hit, bar = getattr(mod, "HIT", None), getattr(mod, "BAR", None)
         if hit is None or bar is None:
             continue                       # 沒有分開兩個概念的關卡＝一小節就是一個拍點
-        k = bar / hit
-        assert abs(k - round(k)) < 1e-6 and round(k) >= 1, (
-            f"{os.path.basename(p)}：一小節 {bar:g} 秒不是拍點間隔 {hit:g} 秒的整數倍"
-            f"（{k:.4f} 倍）——小節線會落在拍點之間，整首愈跑愈偏")
         st = getattr(mod, "STYLE", None)
         if st is not None and getattr(st, "aligned_render", False):
+            bpb = getattr(st, "beats_per_bar", None)
+            assert bpb, f"{st.name} 是自製 render 風格，要填 beats_per_bar"
+            assert abs(bar - bpb * hit) < 1e-6, (
+                f"{name}：一小節 {bar:g} 秒 ≠ {bpb} × 拍點間隔 {hit:g} 秒 —— "
+                f"本章的規矩是**一拍＝一個拍點**（音樂速度＝關卡速度×{bpb}），"
+                f"不照做就會出現「慢的關卡音樂反而比較快」")
             src = os.path.join(PROJ, "sounds", "music", "source", st.source_for(bar))
             assert os.path.exists(src), (
-                f"{os.path.basename(p)} 要的素材不存在：{src}"
+                f"{name} 要的素材不存在：{src}"
                 f"（重做：python3 tools/make_lullaby_render.py --hit {bar:g} --bars N）")
+        else:
+            k = bar / hit
+            assert abs(k - round(k)) < 1e-6 and round(k) >= 1, (
+                f"{name}：一小節 {bar:g} 秒不是拍點間隔 {hit:g} 秒的整數倍"
+                f"（{k:.4f} 倍）——小節線會落在拍點之間，整首愈跑愈偏")
 
 
 def test_music_outlasts_last_note_window():

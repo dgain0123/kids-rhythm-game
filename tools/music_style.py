@@ -575,8 +575,10 @@ class BrahmsLullabyStyle(Style):
 class LullabyMarimbaStyle(Style):
     kind = "track"
     aligned_render = True      # 自製素材：速度本來就對齊拍點，不必偵測/變速
+    beats_per_bar = 3          # 3/4 華爾滋；**一拍＝一個拍點**(BAR = 3 × HIT)是本章的規矩
+                               # (2026-08-03 使用者裁示，見 docs/關卡音樂.md)
     name = "布拉姆斯搖籃曲・木琴馬林巴(自製 render)"
-    key = "C 大調 3/4 華爾滋(90BPM，一小節＝拍點間隔的整數倍)"
+    key = "C 大調 3/4 華爾滋(一拍＝一個拍點，音樂速度＝關卡速度×3：30/60/90BPM)"
     instruments = "馬林巴取樣音源(GeneralUser GS)：旋律＋分解和弦＋低音"
     metronome = "木魚 1100Hz（與第一大關卡相同，使用者裁示）"
     source = "lullaby_marimba_hit2s.wav"      # 預設(速度10)；各關依拍點間隔取對應 render
@@ -588,10 +590,11 @@ class LullabyMarimbaStyle(Style):
 
     def source_for(self, bar_sec):
         """同一首搖籃曲、每個速度各 render 一份；`bar_sec`＝**素材一小節的秒數**
-        （＝關卡拍點間隔的整數倍，見 track_music.render 的 source_hit）。
-        由 tools/make_lullaby_render.py 產生，命名 lullaby_marimba_hit<秒>s.wav。
-        速度10/20 是「一小節＝一個拍點」(2秒/1秒)；速度30 用「一小節＝3個拍點」→ 沿用 2 秒那份
-        （照算的 270BPM 使用者說太趕，2026-08-03）。"""
+        （＝3 × 該關拍點間隔，見 track_music.render 的 source_hit）。
+        由 tools/make_lullaby_render.py 產生，命名 lullaby_marimba_hit<秒>s.wav：
+        速度10→6 秒(30BPM)、速度20→3 秒(60BPM)、速度30→2 秒(90BPM)。
+        **一拍＝一個拍點**是 2026-08-03 使用者裁示（原本「一小節＝一個拍點」會讓
+        速度30 變 270BPM 太趕、也會讓速度10 的音樂比速度30 還快）。"""
         return f"lullaby_marimba_hit{bar_sec:g}s.wav"
 
     def click(self, mx, t, vol=0.28):
