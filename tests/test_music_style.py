@@ -32,7 +32,8 @@ def test_every_chapter_has_its_own_style():
 
 
 def test_styles_are_all_different():
-    """每個章節的『調性／樂器／節拍器／和聲進行』都要跟其他章節不一樣。"""
+    """每個章節的『調性／樂器／和聲進行』都要跟其他章節不一樣。
+    節拍器音色是例外、允許共用（規矩見 docs/關卡音樂.md）。"""
     used = list(music_style.STYLES.items())
     for a in range(len(used)):
         for b in range(a + 1, len(used)):
@@ -40,7 +41,7 @@ def test_styles_are_all_different():
             where = f"第{ca}大關卡「{sa.name}」vs 第{cb}大關卡「{sb.name}」"
             assert sa.key != sb.key, f"{where}：調性一樣({sa.key})"
             assert sa.instruments != sb.instruments, f"{where}：樂器一樣"
-            assert sa.metronome != sb.metronome, f"{where}：節拍器音色一樣"
+            # 節拍器音色**允許共用**(2026-08-03 使用者裁示「提示音跟節拍器都用第一大關原本的」)
             assert sa.signature() != sb.signature(), f"{where}：風格完全一樣"
             prog_a = [tuple(s["chord"]) for s in sa.prog]
             prog_b = [tuple(s["chord"]) for s in sb.prog]

@@ -14,7 +14,7 @@
      N∈{3,4,6,8}(容易落在小節線上)優先、容許範圍也放寬
   3. time-stretch（保持音高）→ 重新量一次拍距，檢查整首的累積漂移
   4. 從一個「小節起點」切入，鋪到需要的長度（不夠就接續循環）
-  5. 疊上 4 拍英文人聲預備拍（人聲騎在音樂上，像真的樂團 count-in）
+  5. 疊上 4 拍英文人聲預備拍（**純人聲、底下不疊節拍器**）
      ＋每個拍點一聲節拍器（音色來自章節風格）→ 淡出 → m4a
 
 **同一首曲子可以給同章節不同速度的關卡用**：只要換 hit_sec（＝該關拍點間隔），
@@ -205,9 +205,10 @@ def render(style, hit_sec, n_hits, out_path, lead_hits=4, pre=1.0, tail=4.0,
         i = max(0, int((pre + k * hit_sec - on) * sr))
         mx.buf[i:i + len(v)] += v[: len(mx.buf) - i] * voice_gain
 
-    # 節拍器：預備拍與拍點都要有 → 脈動不間斷
-    for k in range(lead_hits + n_hits):
-        style.click(mx, pre + k * hit_sec, vol=0.30 if k < lead_hits else 0.42)
+    # 節拍器**只在拍點上響**；預備拍＝純人聲（跟第一大關卡一致，2026-08-03 使用者裁示：
+    # 我原本把節拍器墊在人聲底下，使用者聽出來「雜」）
+    for k in range(n_hits):
+        style.click(mx, pre + (lead_hits + k) * hit_sec)
 
     secs = mx.finish(out_path)
     info = (f"素材 {style.source}：原速 {60/period:.2f}BPM(拍子對比度 {contrast0:.1f}) → "
