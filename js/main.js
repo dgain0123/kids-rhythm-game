@@ -1,7 +1,7 @@
 // main.js — 串接：載入譜 → 麥克風 → 遊戲邏輯 → 畫面
 import { DrumListener } from "./audio.js";
 import { Game } from "./game.js";
-import { drawNotes, drawLane, confetti, needsScroll, laneEnterLeadSec } from "./render.js";
+import { drawNotes, drawLane, confetti, needsScroll } from "./render.js";
 import { initCharacters, showCharacter, setCharCount, getCurrentChar } from "./characters.js";
 
 // 大關卡(章節)：把小關卡收在一起。之後加新章節就在這裡加一組
@@ -168,16 +168,14 @@ function startTimedLoop() {
         els.countdown.hidden = true;
         els.status.textContent = "跟著音樂打！";
       }
-      // 「現在該打」的音符：**燈一直亮著，而且在「圖示進到判定圈」的那一刻才換到下一顆**
-      // （2026-08-03 使用者定案）。切換點＝音符時間 - 進圈提前量，跟太鼓軌道同一組幾何算，
-      // 所以畫面上「貓碰到圈圈」與「譜面換燈」是同一瞬間。
-      const ioi = game.noteTimes.length > 1 ? game.noteTimes[1] - game.noteTimes[0] : 1;
-      const lead0 = laneEnterLeadSec(els.lane.width || els.noteCanvas.width, ioi);
+      // 「現在該打」的音符：**燈一直亮著，而且剛好在拍點上才換**（2026-08-03 使用者定案）。
+      // 切換點＝音符時間本身，也就是圖示正中心對準判定圈圓心、音樂節拍器響的同一瞬間。
+      // **不要有任何提前量**（先前用「進圈提前量 0.136 秒」，使用者說還是早了一些）。
       let act = -1;
       for (let i = 0; i < game.noteTimes.length; i++) {
-        const entered = t >= game.noteTimes[i] - lead0;
-        if (!game.hitNotes[i] && (act === -1 || entered)) act = i;
-        if (!entered) break;                 // 這顆還沒進圈，後面更不用看
+        const reached = t >= game.noteTimes[i];
+        if (!game.hitNotes[i] && (act === -1 || reached)) act = i;
+        if (!reached) break;                 // 還沒到這顆的拍點，後面更不用看
       }
       if (act !== _activeIdx) { _activeIdx = act; if (!scrolls) redrawChart(); }
       if (scrolls && frame % 2 === 1) redrawChart(); // 捲動譜面(30fps，跟軌道錯開幀)

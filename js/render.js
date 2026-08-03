@@ -234,13 +234,6 @@ const LANE_R = 36;        // 判定圈半徑
 const LANE_SPRITE = 62;   // 跑動圖示邊長
 const LANE_SPEED = 0.45;  // 一個音符間隔 = 0.45 個畫面寬
 
-// 圖示「進到判定圈」的提前量(秒)：邊緣碰到圈圈的瞬間 = 音符時間 - 這個值。
-// 譜面換燈就用它當切換點，跟軌道畫面同一組幾何算出來 → 一定同步。
-export function laneEnterLeadSec(laneWidth, ioi) {
-  const pps = (Math.max(1, laneWidth) * LANE_SPEED) / Math.max(1e-6, ioi);
-  return (LANE_R + LANE_SPRITE / 2) / pps;
-}
-
 // 角色圖示從右往左跑，跑進左邊的判定圈時打鼓。
 // 參數：t=譜面時間(秒)、noteTimes=各音符時間、hit=各音符是否已打到、
 //       tolSec=容許誤差(秒)、fx=[{time}]最近打中的時間(爆星特效)、
