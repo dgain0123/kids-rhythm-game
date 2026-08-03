@@ -122,12 +122,18 @@ def pick_rate(period, hit_sec):
 
 
 def render(style, hit_sec, n_hits, out_path, lead_hits=4, pre=1.0, tail=4.0,
-           music_gain=0.55, voice_gain=0.30, sr=SR, max_drift=0.08, source_hit=None):
+           music_gain=0.55, voice_gain=0.30, sr=SR, max_drift=0.08, source_hit=None,
+           count_sec=None):
     """做出一關的音樂檔。回傳 (總長秒, 說明字串)。
     style：章節風格(要有 source 檔名與 click 節拍器音色)。
     voice_gain 預設 0.40＝實測讓預備拍音量跟第一大關卡一致(-18.8dB)：**人聲推太大(曾設 0.85)，母帶壓縮會把
     edge-tts 人聲本身的 mp3 編碼雜訊放出來**，使用者聽得出來(2026-08-03)。
     hit_sec：該關的拍點間隔；n_hits：要打幾下。
+
+    count_sec：**預備拍人聲的間隔(秒)**，預設＝hit_sec(＝速度50以下的規矩)。
+    速度60起改成「四分音符(一拍)一聲」——三連音關卡的一拍＝3 個拍點，就填 count_sec=3*hit_sec
+    （規矩見 docs/關卡系統.md 的預備拍那條；八分/三連音間隔太趕，而且人聲字長 0.72~0.79 秒，
+    間隔一短就整片疊在一起）。音樂進場點＝pre + lead_hits × count_sec，節拍器仍然只在拍點上。
 
     source_hit：**素材的小節長度(秒)**，預設＝hit_sec(一小節＝一個拍點)。
     關卡越快、素材照著變快就會變得又急又吵（速度30 照算是 270BPM，使用者打槍），
@@ -142,10 +148,13 @@ def render(style, hit_sec, n_hits, out_path, lead_hits=4, pre=1.0, tail=4.0,
     src = os.path.join(SOURCE_DIR, name)
     y, _ = librosa.load(src, sr=sr, mono=True)
 
+    count = count_sec or hit_sec                # 預備拍人聲間隔(預設＝拍點間隔)
+    lead_span = lead_hits * count               # 預備拍總長(音樂進場前)
+
     if getattr(style, "aligned_render", False):
-        span = pre + (lead_hits + n_hits) * hit_sec
+        span = pre + lead_span + n_hits * hit_sec
         mx = Mixer(span + tail, sr)
-        t0 = pre + lead_hits * hit_sec          # 音樂從第一個拍點開始(預備拍只有人聲)
+        t0 = pre + lead_span                    # 音樂從第一個拍點開始(預備拍只有人聲)
         # ★母帶(壓縮+響度)**只作用在音樂上**：預備拍底下沒音樂，若整軌一起壓，
         # 壓縮器會把人聲連同它的編碼雜訊一起抬起來——使用者聽出來「人聲雜」(2026-08-03)。
         # 音樂先做好母帶，人聲與節拍器最後原封不動疊上去，最後只等比例調音量。
@@ -159,10 +168,10 @@ def render(style, hit_sec, n_hits, out_path, lead_hits=4, pre=1.0, tail=4.0,
         # 預備拍＝**純人聲、底下不疊節拍器**（跟第一大關卡一模一樣；
         # 之前我在人聲底下加節拍器墊底，使用者聽出來「雜」——2026-08-03 裁示改回）
         for k, (v, on) in enumerate(count_voices(sr)):
-            i = max(0, int((pre + k * hit_sec - on) * sr))
+            i = max(0, int((pre + k * count - on) * sr))
             mx.buf[i:i + len(v)] += v[: len(mx.buf) - i] * voice_gain
         for k in range(n_hits):                 # 節拍器只在拍點上
-            style.click(mx, pre + (lead_hits + k) * hit_sec)
+            style.click(mx, t0 + k * hit_sec)
         secs = mx.finish(out_path, clean=True)  # ★整軌也不壓縮，只等比例調音量
         return secs, (f"素材 {name}：自製 MIDI＋SoundFont render(乾聲)，"
                       f"速度本來就對齊拍點 → 不偵測、不變速；音樂自 {t0:.0f} 秒進場")
@@ -176,7 +185,7 @@ def render(style, hit_sec, n_hits, out_path, lead_hits=4, pre=1.0, tail=4.0,
 
     # 變速後直接量「音樂的拍子有沒有落在目標網格上」(不重跑 beat_track，避免節拍層級誤判)
     target = hit_sec / n
-    span = pre + (lead_hits + n_hits) * hit_sec
+    span = pre + lead_span + n_hits * hit_sec
     need_sec = span + tail
     env = onset_env(ys, sr)
     fps = sr / HOP
@@ -209,13 +218,13 @@ def render(style, hit_sec, n_hits, out_path, lead_hits=4, pre=1.0, tail=4.0,
 
     # 預備拍人聲(騎在音樂上)：不修剪、用起音點對齊拍點
     for k, (v, on) in enumerate(count_voices(sr)):
-        i = max(0, int((pre + k * hit_sec - on) * sr))
+        i = max(0, int((pre + k * count - on) * sr))
         mx.buf[i:i + len(v)] += v[: len(mx.buf) - i] * voice_gain
 
     # 節拍器**只在拍點上響**；預備拍＝純人聲（跟第一大關卡一致，2026-08-03 使用者裁示：
     # 我原本把節拍器墊在人聲底下，使用者聽出來「雜」）
     for k in range(n_hits):
-        style.click(mx, pre + (lead_hits + k) * hit_sec)
+        style.click(mx, pre + lead_span + k * hit_sec)
 
     secs = mx.finish(out_path)
     info = (f"素材 {style.source}：原速 {60/period:.2f}BPM(拍子對比度 {contrast0:.1f}) → "

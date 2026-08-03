@@ -15,7 +15,8 @@ const GROUPS = [
   },
   {
     title: "第一行第二小節",
-    levels: ["level19", "level20", "level21", "level22", "level23"],
+    levels: ["level19", "level20", "level21", "level22", "level23", "level24", "level25",
+             "level26", "level27", "level28", "level29"],
   },
 ];
 const LEVELS = GROUPS.flatMap((g) => g.levels);

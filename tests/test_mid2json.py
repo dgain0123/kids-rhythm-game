@@ -201,6 +201,55 @@ def test_triplet_timed_level():
         os.remove(path)
 
 
+SAME_CONTENT_LEVELS = list(range(23, 30))   # 第23~29關＝速度40~100，內容完全一樣
+
+
+def test_same_content_levels_share_grid():
+    """**同內容不同速度的關卡，譜面音符必須逐顆一樣**（只有 bpm/title/容許秒數不同）。
+
+    第23~29關（速度40~100）是同一份內容：MIDI 由 `tools/retempo_midi.py` 從
+    `midi/第23關.mid` 只換 tempo 產生（音符 tick 逐一相同）。這條測試就是防止
+    以後只重出其中一關、悄悄變成「內容不一樣了」——那會讓小朋友練同一段的手感斷掉。
+    要故意讓某關內容不同，就把它從 SAME_CONTENT_LEVELS 移掉並在該關 md 寫清楚。
+    """
+    import json
+    proj = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    base_notes = None
+    for lv in SAME_CONTENT_LEVELS:
+        path = os.path.join(proj, "charts", f"level{lv}.json")
+        assert os.path.exists(path), f"缺 charts/level{lv}.json（同內容關卡表裡有它）"
+        chart = json.load(open(path, encoding="utf-8"))
+        notes = [(n["type"], n["drum"], n["beat"]) for n in chart["notes"]]
+        assert chart["toleranceBeats"] == 0.3333, (
+            f"level{lv} 的容許值不是 1/3 拍（使用者 2026-08-04 指定這幾關全部 1/3 拍）")
+        if base_notes is None:
+            base_notes, base_lv = notes, lv
+            continue
+        assert notes == base_notes, (
+            f"level{lv} 的譜面跟 level{base_lv} 不一樣了（{len(notes)} vs {len(base_notes)} 顆）——"
+            f"這幾關應該只差速度；重出請用 "
+            f"python3 tools/retempo_midi.py --src midi/第{base_lv}關.mid --bpm <速度> "
+            f"-o midi/第{lv}關.mid")
+
+
+def test_midi_tempo_matches_chart_bpm():
+    """每關 chart 的 bpm 要等於它來源 MIDI 的 tempo（轉檔器直接讀 MIDI，
+    所以這條在抓「換了 MIDI 卻沒重轉譜」或「retempo 打錯速度」）。"""
+    import json
+    proj = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    for lv in SAME_CONTENT_LEVELS:
+        mid = os.path.join(proj, "midi", f"第{lv}關.mid")
+        chart = json.load(open(os.path.join(proj, "charts", f"level{lv}.json"), encoding="utf-8"))
+        if not os.path.exists(mid):
+            continue
+        bpm = pretty_midi.PrettyMIDI(mid).get_tempo_changes()[1][0]
+        # MIDI 的 tempo 存的是「每拍幾微秒」的整數 → 70BPM 實際是 70.0000047，
+        # 轉檔器會取整到 70.0；所以比對留 0.01 的餘裕，不是浮點等值。
+        assert abs(bpm - chart["bpm"]) < 0.01, (
+            f"midi/第{lv}關.mid 的 tempo {bpm:g} ≠ charts/level{lv}.json 的 bpm "
+            f"{chart['bpm']:g}——譜沒有跟著 MIDI 重轉")
+
+
 if __name__ == "__main__":
     for name, fn in sorted(globals().items()):
         if name.startswith("test_") and callable(fn):

@@ -61,6 +61,12 @@ python3 tools/mid2json.py 你的鼓.mid --bars 4 --title "第二關"
 # 只留小鼓當簡單關
 python3 tools/mid2json.py 你的鼓.mid --only snare --bars 4 -o charts/level2.json
 ```
+**同內容、只換速度的關卡**（例：第23~29關的速度40~100）不用重新匯出 MIDI：
+```bash
+python3 tools/retempo_midi.py --src midi/第23關.mid --bpm 50 -o midi/第24關.mid
+```
+只改 tempo 事件、音符 tick 逐一相同（改完會自己驗證，不同就爆）。內容要變才要重新匯出。
+
 選項：`--only kick,snare,hihat,tom,cymbal`、`--bars N`、`--max-hits N`、`--title`、`--hint`、
 `--count-mode`（數下數關卡：不輸出 bpm/beat，遊戲只看打幾下、不判拍子）。
 音符時值認得四分/八分/**三連音**（`triplet`＝1/3 拍，三顆一組，譜面自動連樑並標「3」）。
