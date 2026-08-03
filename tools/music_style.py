@@ -44,7 +44,9 @@ LIMIT_KNEE = 0.60        # 超過這個振幅才開始軟壓，底下完全不�
 CLEAN_MASTER = True      # ★全域：母帶一律「只調音量」，**不做任何壓縮/限幅**
                          # (2026-08-03 使用者裁示「全拿掉壓縮，只調音量」——壓縮會吃掉動態
                          #  並把人聲的編碼雜訊抬起來；代價是整體比壓縮版小約 6 dB)
-CLEAN_PEAK = 0.89        # clean 模式的目標峰值(留餘裕給 AAC 過衝)
+CLEAN_PEAK = 0.97        # clean 模式的目標峰值。零壓縮素材幾乎沒有 AAC 過衝
+                         # (實測上限0.99→解碼0.987)，所以可以推到 0.97 榨出最後 0.9dB；
+                         # 這是純 gain、不動任何動態。**再上去就削波，不可能更大聲了**
 AAC_BITRATE = "160000"   # 實測(真實浮點峰值)：天花板0.72+160k → 0.89 安全；
                          # 0.80+128k 會過衝到 1.02 破音
 
@@ -164,8 +166,34 @@ class Mixer:
             w.writeframes((x * 32767).astype("<i2").tobytes())
         subprocess.run(["afconvert", "-f", "m4af", "-d", "aac", "-b", AAC_BITRATE,
                         wav_path, m4a_path], check=True)
+        # ★編碼後驗證：AAC 會過衝，不同素材過衝量不同(實測 level14 在上限0.97 時
+        # 解碼出 1.05 破表)。破表就等比例降一點重編，直到安全為止。
+        for _ in range(4):
+            pk = _decoded_peak(m4a_path)
+            if pk is None or pk <= 0.99:
+                break
+            x = x * (0.985 / pk)
+            with wave.open(wav_path, "wb") as w:
+                w.setnchannels(1)
+                w.setsampwidth(2)
+                w.setframerate(self.sr)
+                w.writeframes((x * 32767).astype("<i2").tobytes())
+            subprocess.run(["afconvert", "-f", "m4af", "-d", "aac", "-b", AAC_BITRATE,
+                            wav_path, m4a_path], check=True)
         os.remove(wav_path)
         return len(self.buf) / self.sr
+
+
+def _decoded_peak(path):
+    """解碼回來量真實峰值(要用 float，s16 會被夾在 1.000 看不出過衝)。"""
+    try:
+        raw = subprocess.run(["ffmpeg", "-v", "quiet", "-i", path, "-ac", "1",
+                              "-ar", "44100", "-f", "f32le", "-"],
+                             capture_output=True, check=True).stdout
+        y = np.frombuffer(raw, dtype="<f4")
+        return float(np.max(np.abs(y))) if len(y) else None
+    except Exception:
+        return None
 
 
 class Style:

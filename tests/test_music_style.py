@@ -118,15 +118,17 @@ def test_normalize_loudness_hits_target():
     assert np.max(np.abs(mx.buf)) <= music_style.LIMIT_CEILING + 1e-6, "峰值超過限幅天花板"
 
 
-def _rms_peak(path, sr=8000, skip_head=3.0, skip_tail=2.0):
-    """用 ffmpeg 快速解碼量 RMS 與峰值（比 librosa 快很多，適合守門）。"""
+def _rms_peak(path, sr=44100, skip_head=3.0, skip_tail=2.0):
+    """用 ffmpeg 快速解碼量 RMS 與峰值（比 librosa 快很多，適合守門）。
+    ⚠️ **一定要用原生取樣率 44100 量峰值**：降取樣(8k/22k)的濾波器本身會過衝，
+    量出來會假破表(實測 level14 原生 0.977、降到 8k 變 1.097)。"""
     import subprocess
 
     import numpy as np
     out = subprocess.run(["ffmpeg", "-v", "quiet", "-i", path, "-ac", "1",
-                          "-ar", str(sr), "-f", "s16le", "-"],
+                          "-ar", str(sr), "-f", "f32le", "-"],
                          capture_output=True, check=True).stdout
-    y = np.frombuffer(out, dtype="<i2").astype(float) / 32768
+    y = np.frombuffer(out, dtype="<f4").astype(float)
     core = y[int(skip_head * sr): len(y) - int(skip_tail * sr)]
     if len(core) < sr:
         core = y

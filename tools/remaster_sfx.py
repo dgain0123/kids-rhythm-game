@@ -23,7 +23,7 @@ import numpy as np
 
 PROJ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SOUNDS = os.path.join(PROJ, "sounds")
-TARGET_SFX_LOUD = 0.226     # -12.9 dBFS：關卡音樂(零壓縮版)的響段響度
+TARGET_SFX_LOUD = 0.248     # -12.1 dBFS：關卡音樂(零壓縮、峰值上限0.97)的響段響度
                             # (2026-08-03 全面拿掉壓縮後，音樂降了約 6dB，音效跟著降)
 TOLERANCE_DB = 1.5          # 差這麼多以內就不動(避免每次重壓越壓越扁)
 FILES = ["cheer.wav", "cheer.mp3", "fail.wav"]
