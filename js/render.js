@@ -229,6 +229,18 @@ export function drawNotes(canvas, notes, state = {}) {
 }
 
 // ── 太鼓達人式軌道（跟拍關卡用）──
+// 幾何常數放這裡當單一真相：**譜面的橘色高亮要跟「圖示進判定圈」同步**，
+// 所以高亮窗口由 laneHitWindowSec 用同一組常數算出來（2026-08-03 使用者要求）。
+const LANE_R = 36;        // 判定圈半徑
+const LANE_SPRITE = 62;   // 跑動圖示邊長
+const LANE_SPEED = 0.45;  // 一個音符間隔 = 0.45 個畫面寬
+
+// 圖示與判定圈重疊的「半窗」秒數：|t - 音符時間| 小於它，圖示就在圈圈裡
+export function laneHitWindowSec(laneWidth, ioi) {
+  const pps = (Math.max(1, laneWidth) * LANE_SPEED) / Math.max(1e-6, ioi);
+  return (LANE_R + LANE_SPRITE / 2) / pps;
+}
+
 // 角色圖示從右往左跑，跑進左邊的判定圈時打鼓。
 // 參數：t=譜面時間(秒)、noteTimes=各音符時間、hit=各音符是否已打到、
 //       tolSec=容許誤差(秒)、fx=[{time}]最近打中的時間(爆星特效)、
@@ -240,7 +252,7 @@ export function drawLane(canvas, { t, noteTimes, hit = [], tolSec = 0, fx = [], 
   const cy = H * 0.56;
   // 判定圈位置：由譜面算好傳進來(anchorX) → 跟上面的紅色基準線垂直對齊
   const hitX = anchorX || W * 0.16;
-  const R = 36;
+  const R = LANE_R;
 
   // 軌道底
   ctx.fillStyle = "#eef1fa";
@@ -252,7 +264,7 @@ export function drawLane(canvas, { t, noteTimes, hit = [], tolSec = 0, fx = [], 
   // 音符間隔(用前兩個音符的距離；只有一個就當 1 秒)
   const ioi = noteTimes.length > 1 ? noteTimes[1] - noteTimes[0] : 1;
   // 捲動速度：一個間隔 = 0.45 個畫面寬
-  const pps = (W * 0.45) / ioi;
+  const pps = (W * LANE_SPEED) / ioi;
 
   // 判定圈：跟著拍子脈動
   const phase = (((t % ioi) + ioi) % ioi) / ioi;
@@ -282,7 +294,7 @@ export function drawLane(canvas, { t, noteTimes, hit = [], tolSec = 0, fx = [], 
     const hop = Math.abs(Math.sin((noteTimes[i] - t) * Math.PI / (ioi / 2))) * 8;
     const y = cy - hop;
     if (imgOk) {
-      const S = 62;
+      const S = LANE_SPRITE;
       ctx.drawImage(img, x - S / 2, y - S / 2 - 4, S, S);
     } else {
       ctx.font = "48px serif";
