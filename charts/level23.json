@@ -1,0 +1,258 @@
+{
+  "title": "速度40",
+  "bpm": 40.0,
+  "maxHits": 49,
+  "notes": [
+    {
+      "type": "triplet",
+      "drum": "snare",
+      "beat": 0.0
+    },
+    {
+      "type": "triplet",
+      "drum": "snare",
+      "beat": 0.333
+    },
+    {
+      "type": "triplet",
+      "drum": "snare",
+      "beat": 0.667
+    },
+    {
+      "type": "triplet",
+      "drum": "snare",
+      "beat": 1.0
+    },
+    {
+      "type": "triplet",
+      "drum": "snare",
+      "beat": 1.333
+    },
+    {
+      "type": "triplet",
+      "drum": "snare",
+      "beat": 1.667
+    },
+    {
+      "type": "triplet",
+      "drum": "snare",
+      "beat": 2.0
+    },
+    {
+      "type": "triplet",
+      "drum": "snare",
+      "beat": 2.333
+    },
+    {
+      "type": "triplet",
+      "drum": "snare",
+      "beat": 2.667
+    },
+    {
+      "type": "triplet",
+      "drum": "snare",
+      "beat": 3.0
+    },
+    {
+      "type": "triplet",
+      "drum": "snare",
+      "beat": 3.333
+    },
+    {
+      "type": "triplet",
+      "drum": "snare",
+      "beat": 3.667
+    },
+    {
+      "type": "triplet",
+      "drum": "snare",
+      "beat": 4.0
+    },
+    {
+      "type": "triplet",
+      "drum": "snare",
+      "beat": 4.333
+    },
+    {
+      "type": "triplet",
+      "drum": "snare",
+      "beat": 4.667
+    },
+    {
+      "type": "triplet",
+      "drum": "snare",
+      "beat": 5.0
+    },
+    {
+      "type": "triplet",
+      "drum": "snare",
+      "beat": 5.333
+    },
+    {
+      "type": "triplet",
+      "drum": "snare",
+      "beat": 5.667
+    },
+    {
+      "type": "triplet",
+      "drum": "snare",
+      "beat": 6.0
+    },
+    {
+      "type": "triplet",
+      "drum": "snare",
+      "beat": 6.333
+    },
+    {
+      "type": "triplet",
+      "drum": "snare",
+      "beat": 6.667
+    },
+    {
+      "type": "triplet",
+      "drum": "snare",
+      "beat": 7.0
+    },
+    {
+      "type": "triplet",
+      "drum": "snare",
+      "beat": 7.333
+    },
+    {
+      "type": "triplet",
+      "drum": "snare",
+      "beat": 7.667
+    },
+    {
+      "type": "triplet",
+      "drum": "snare",
+      "beat": 8.0
+    },
+    {
+      "type": "triplet",
+      "drum": "snare",
+      "beat": 8.333
+    },
+    {
+      "type": "triplet",
+      "drum": "snare",
+      "beat": 8.667
+    },
+    {
+      "type": "triplet",
+      "drum": "snare",
+      "beat": 9.0
+    },
+    {
+      "type": "triplet",
+      "drum": "snare",
+      "beat": 9.333
+    },
+    {
+      "type": "triplet",
+      "drum": "snare",
+      "beat": 9.667
+    },
+    {
+      "type": "triplet",
+      "drum": "snare",
+      "beat": 10.0
+    },
+    {
+      "type": "triplet",
+      "drum": "snare",
+      "beat": 10.333
+    },
+    {
+      "type": "triplet",
+      "drum": "snare",
+      "beat": 10.667
+    },
+    {
+      "type": "triplet",
+      "drum": "snare",
+      "beat": 11.0
+    },
+    {
+      "type": "triplet",
+      "drum": "snare",
+      "beat": 11.333
+    },
+    {
+      "type": "triplet",
+      "drum": "snare",
+      "beat": 11.667
+    },
+    {
+      "type": "triplet",
+      "drum": "snare",
+      "beat": 12.0
+    },
+    {
+      "type": "triplet",
+      "drum": "snare",
+      "beat": 12.333
+    },
+    {
+      "type": "triplet",
+      "drum": "snare",
+      "beat": 12.667
+    },
+    {
+      "type": "triplet",
+      "drum": "snare",
+      "beat": 13.0
+    },
+    {
+      "type": "triplet",
+      "drum": "snare",
+      "beat": 13.333
+    },
+    {
+      "type": "triplet",
+      "drum": "snare",
+      "beat": 13.667
+    },
+    {
+      "type": "triplet",
+      "drum": "snare",
+      "beat": 14.0
+    },
+    {
+      "type": "triplet",
+      "drum": "snare",
+      "beat": 14.333
+    },
+    {
+      "type": "triplet",
+      "drum": "snare",
+      "beat": 14.667
+    },
+    {
+      "type": "triplet",
+      "drum": "snare",
+      "beat": 15.0
+    },
+    {
+      "type": "triplet",
+      "drum": "snare",
+      "beat": 15.333
+    },
+    {
+      "type": "triplet",
+      "drum": "snare",
+      "beat": 15.667
+    },
+    {
+      "type": "quarter",
+      "drum": "snare",
+      "beat": 16.0
+    }
+  ],
+  "hint": "再快一點！三個一組，最後一下長音～",
+  "toleranceBeats": 0.3333,
+  "music": "./sounds/music/level23.m4a",
+  "leadInSec": 3.0,
+  "metronome": "triplet",
+  "preRollSec": 1.0
+}

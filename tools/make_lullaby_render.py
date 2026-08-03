@@ -14,6 +14,7 @@
     python3 tools/make_lullaby_render.py --hit 6 --bars 6      # 速度10 用(30BPM)
     python3 tools/make_lullaby_render.py --hit 3 --bars 11     # 速度20 用(60BPM)
     python3 tools/make_lullaby_render.py --hit 2 --bars 15     # 速度30 用(90BPM)
+    python3 tools/make_lullaby_render.py --hit 1.5 --bars 19   # 速度40 用(120BPM)
 產出：midi/搖籃曲_第二大關卡_hit<H>s.mid、sounds/music/source/lullaby_marimba_hit<H>s.wav
 
 音色庫（31MB，不進 repo，見 .gitignore）：
