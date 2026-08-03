@@ -122,9 +122,11 @@ def pick_rate(period, hit_sec):
 
 
 def render(style, hit_sec, n_hits, out_path, lead_hits=4, pre=1.0, tail=4.0,
-           music_gain=0.55, voice_gain=0.85, sr=SR, max_drift=0.08):
+           music_gain=0.55, voice_gain=0.30, sr=SR, max_drift=0.08):
     """做出一關的音樂檔。回傳 (總長秒, 說明字串)。
     style：章節風格(要有 source 檔名與 click 節拍器音色)。
+    voice_gain 預設 0.40＝實測讓預備拍音量跟第一大關卡一致(-18.8dB)：**人聲推太大(曾設 0.85)，母帶壓縮會把
+    edge-tts 人聲本身的 mp3 編碼雜訊放出來**，使用者聽得出來(2026-08-03)。
     hit_sec：該關的拍點間隔；n_hits：要打幾下。
 
     style.aligned_render=True（**自製 MIDI 用 SoundFont render 出來的素材**）時：
@@ -135,15 +137,25 @@ def render(style, hit_sec, n_hits, out_path, lead_hits=4, pre=1.0, tail=4.0,
     if getattr(style, "aligned_render", False):
         span = pre + (lead_hits + n_hits) * hit_sec
         mx = Mixer(span + tail, sr)
-        t0 = pre + lead_hits * hit_sec          # 音樂從第一個拍點開始(預備拍只有人聲+節拍器)
+        t0 = pre + lead_hits * hit_sec          # 音樂從第一個拍點開始(預備拍只有人聲)
+        # ★母帶(壓縮+響度)**只作用在音樂上**：預備拍底下沒音樂，若整軌一起壓，
+        # 壓縮器會把人聲連同它的編碼雜訊一起抬起來——使用者聽出來「人聲雜」(2026-08-03)。
+        # 音樂先做好母帶，人聲與節拍器最後原封不動疊上去，最後只等比例調音量。
         seg = y[: int((len(mx.buf) / sr - t0) * sr)]
-        mx.buf[int(t0 * sr): int(t0 * sr) + len(seg)] += seg * music_gain
+        # ★**完全不壓縮**（2026-08-03 使用者裁示：「壓縮要拿掉」）——
+        # 壓縮會吃掉動態(實測把 14.7dB 的 crest factor 壓成 6.7dB)並把雜訊抬起來。
+        # 這裡只做「等比例調音量」：在不削波的前提下盡量推大(峰值上限 CLEAN_PEAK)。
+        from music_style import CLEAN_PEAK
+        gain = CLEAN_PEAK / max(1e-9, float(np.max(np.abs(seg))))
+        mx.buf[int(t0 * sr): int(t0 * sr) + len(seg)] += seg * gain
+        # 預備拍＝**純人聲、底下不疊節拍器**（跟第一大關卡一模一樣；
+        # 之前我在人聲底下加節拍器墊底，使用者聽出來「雜」——2026-08-03 裁示改回）
         for k, (v, on) in enumerate(count_voices(sr)):
             i = max(0, int((pre + k * hit_sec - on) * sr))
             mx.buf[i:i + len(v)] += v[: len(mx.buf) - i] * voice_gain
-        for k in range(lead_hits + n_hits):
-            style.click(mx, pre + k * hit_sec, vol=0.30 if k < lead_hits else 0.42)
-        secs = mx.finish(out_path)
+        for k in range(n_hits):                 # 節拍器只在拍點上
+            style.click(mx, pre + (lead_hits + k) * hit_sec)
+        secs = mx.finish(out_path, clean=True)  # ★整軌也不壓縮，只等比例調音量
         return secs, (f"素材 {style.source}：自製 MIDI＋SoundFont render(乾聲)，"
                       f"速度本來就對齊拍點 → 不偵測、不變速；音樂自 {t0:.0f} 秒進場")
 

@@ -134,9 +134,10 @@ def _rms_peak(path, sr=8000, skip_head=3.0, skip_tail=2.0):
 
 
 def test_all_level_music_loudness():
-    """**每個關卡音樂的音量都要一致**（RMS 對齊 TARGET_RMS ±2.5dB），
-    而且解碼後峰值不可以超過 1.0（AAC 過衝會破音）。
-    2026-08-03：第20關用峰值正規化，比第一大關卡小 7dB，被使用者抓到 → 改用 RMS 對齊。"""
+    """所有關卡音樂：**只調音量、完全不壓縮**（2026-08-03 使用者裁示）→
+    ① 彼此音量要一致（RMS 最大差 ≤3dB，不然換關會忽大忽小）
+    ② 動態要保住（crest factor ≥10dB；壓縮過的會掉到 6~7dB，這條就是防壓縮復辟）
+    ③ 解碼峰值 ≤1.0（AAC 過衝會破音）"""
     import glob
     import shutil
 
@@ -146,12 +147,18 @@ def test_all_level_music_loudness():
         return
     files = sorted(glob.glob(os.path.join(PROJ, "sounds", "music", "level*.m4a")))
     assert files, "找不到任何關卡音樂"
+    levels = []
     for f in files:
         rms, peak = _rms_peak(f)
-        db = 20 * np.log10(max(rms, 1e-9) / music_style.TARGET_RMS)
         name = os.path.basename(f)
-        assert abs(db) <= 2.5, f"{name} 音量偏離目標 {db:+.1f} dB（其他關會覺得忽大忽小）"
-        assert peak <= 1.0, f"{name} 解碼峰值 {peak:.3f} > 1.0，會破音（限幅天花板要再降）"
+        db = 20 * np.log10(max(rms, 1e-9))
+        crest = 20 * np.log10(peak / max(rms, 1e-9))
+        levels.append((name, db))
+        assert peak <= 1.0, f"{name} 解碼峰值 {peak:.3f} > 1.0，會破音"
+        assert crest >= 10.0, (f"{name} 動態只剩 {crest:.1f}dB（<10）——"
+                               f"八成又被壓縮了，母帶要走 clean 模式")
+    spread = max(d for _, d in levels) - min(d for _, d in levels)
+    assert spread <= 3.0, f"各關音量差 {spread:.1f}dB（>3）：{levels}"
 
 
 def test_sfx_loudness_matches_music():

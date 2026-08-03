@@ -41,6 +41,10 @@ TARGET_RMS = 0.316       # -10.0 dBFS：對齊「完成提示音」的響度(202
                          # 「跟提示音一樣大聲」；原本 -16.4 dB 對齊第一大關卡仍嫌小聲)
 LIMIT_CEILING = 0.72     # 限幅天花板：留餘裕給 AAC 編碼過衝
 LIMIT_KNEE = 0.60        # 超過這個振幅才開始軟壓，底下完全不動
+CLEAN_MASTER = True      # ★全域：母帶一律「只調音量」，**不做任何壓縮/限幅**
+                         # (2026-08-03 使用者裁示「全拿掉壓縮，只調音量」——壓縮會吃掉動態
+                         #  並把人聲的編碼雜訊抬起來；代價是整體比壓縮版小約 6 dB)
+CLEAN_PEAK = 0.89        # clean 模式的目標峰值(留餘裕給 AAC 過衝)
 AAC_BITRATE = "160000"   # 實測(真實浮點峰值)：天花板0.72+160k → 0.89 安全；
                          # 0.80+128k 會過衝到 1.02 破音
 
@@ -135,12 +139,20 @@ class Mixer:
         np.clip(self.buf, -ceiling, ceiling, out=self.buf)
         return self.loudness()
 
-    def finish(self, m4a_path, fade_sec=1.2, target_rms=TARGET_RMS):
+    def finish(self, m4a_path, fade_sec=1.2, target_rms=TARGET_RMS, clean=CLEAN_MASTER):
+        """clean=True＝**只調音量**：整軌等比例放大到安全峰值，
+        不壓縮、不限幅、不做任何動態處理（2026-08-03 使用者要求：
+        「什麼東西都不要動，只要調整音量就好」——壓縮會把人聲的編碼雜訊抬起來）。"""
         fade = int(fade_sec * self.sr)
         if fade > 0:
             self.buf[-fade:] *= np.linspace(1, 0, fade)
-        self.compress()                      # 先壓縮(抬小聲處)再推響度，才不會壓爛
-        self.normalize_loudness(target_rms)
+        if clean:
+            peak = float(np.max(np.abs(self.buf)))
+            if peak > 1e-9:
+                self.buf *= CLEAN_PEAK / peak
+        else:
+            self.compress()                  # 先壓縮(抬小聲處)再推響度，才不會壓爛
+            self.normalize_loudness(target_rms)
         x = self.buf
         if os.path.dirname(m4a_path):
             os.makedirs(os.path.dirname(m4a_path), exist_ok=True)
@@ -538,7 +550,7 @@ class LullabyMarimbaStyle(Style):
     name = "布拉姆斯搖籃曲・木琴馬林巴(自製 render)"
     key = "C 大調 3/4 華爾滋(90BPM，一小節＝一個拍點)"
     instruments = "馬林巴取樣音源(GeneralUser GS)：旋律＋分解和弦＋低音"
-    metronome = "高音木塊(1500Hz 極短)"
+    metronome = "木魚 1100Hz（與第一大關卡相同，使用者裁示）"
     source = "lullaby_marimba_render.wav"
     license = "公共領域旋律(布拉姆斯 1868)＋自製編曲；音源 GeneralUser GS 允許自由使用含商用"
     credit = ("Lullaby (Brahms, public domain melody) — 自製 MIDI 編曲，"
@@ -546,11 +558,14 @@ class LullabyMarimbaStyle(Style):
     source_url = "https://github.com/mrbumpy409/GeneralUser-GS"
     ui_credit = "布拉姆斯搖籃曲（公共領域）· 音源 GeneralUser GS"
 
-    def click(self, mx, t, vol=0.42):
-        n = int(0.09 * mx.sr)
+    def click(self, mx, t, vol=0.28):
+        """**跟第一大關卡用同一個木魚**（1100Hz，衰減 30ms，音量 0.28）——
+        2026-08-03 使用者裁示：「提示音跟節拍器都用第一大關原本的就好」。
+        （原本我自己調了 900~1500Hz 的版本，聽起來雜。）"""
+        n = int(0.12 * mx.sr)
         t2 = np.arange(n) / mx.sr
-        s = np.sin(2 * np.pi * 1500 * t2) + 0.4 * np.sin(2 * np.pi * 3400 * t2)
-        mx.add(t, s * mx.env_ad(n, 0.002, 0.022) * vol)
+        s = np.sin(2 * np.pi * 1100 * t2) + 0.3 * np.sin(2 * np.pi * 2640 * t2)
+        mx.add(t, s * mx.env_ad(n, 0.002, 0.03) * vol)
 
 
 # 備用風格(之後開新章節可直接用或當範本)：合成三款 + 用過/試過的現成曲目

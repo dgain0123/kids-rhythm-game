@@ -5,8 +5,8 @@
 所以改用 **響段響度**＝把音檔切 0.4 秒一格、取最響的 1/4 格平均（近似人耳對「這聲多大」的印象）。
 目標值 `TARGET_SFX_LOUD` 就是關卡音樂的響段響度。
 
-處理鏈：溫和壓縮 → 拉到目標響段 → 軟膝限幅（音效檔沒有編碼過衝問題，天花板可以高一點）
-→ 寫回原格式（wav 用 16-bit、mp3 用 libmp3lame）。
+處理鏈：**只調音量**（拉到目標響段；只有會削波時才等比例壓回來）→ 寫回原格式。
+⚠️ **不做壓縮**（2026-08-03 使用者裁示「全拿掉壓縮」）——壓縮會吃掉動態、抬起雜訊。
 
 ⚠️ 量立體聲檔要用 **(L+R)/2** 自己混，不要用 `ffmpeg -ac 1`：
    它的降混會把兩聲道相加，量出來會比實際大（實測歡呼被算成峰值 1.39）。
@@ -23,7 +23,8 @@ import numpy as np
 
 PROJ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SOUNDS = os.path.join(PROJ, "sounds")
-TARGET_SFX_LOUD = 0.375     # -8.5 dBFS：關卡音樂的響段響度(母帶後量到 -8.3~-8.6)
+TARGET_SFX_LOUD = 0.226     # -12.9 dBFS：關卡音樂(零壓縮版)的響段響度
+                            # (2026-08-03 全面拿掉壓縮後，音樂降了約 6dB，音效跟著降)
 TOLERANCE_DB = 1.5          # 差這麼多以內就不動(避免每次重壓越壓越扁)
 FILES = ["cheer.wav", "cheer.mp3", "fail.wav"]
 
@@ -99,11 +100,10 @@ def main(argv=None):
         if abs(db) <= TOLERANCE_DB:
             print(f"  {name:12s} 響段 {20*np.log10(before):6.1f} dB ({db:+.1f}) → 已達標，跳過")
             continue
-        y = compress(x, sr)
-        y *= TARGET_SFX_LOUD / max(loud_segment(y, sr), 1e-9)
-        y = soft_limit(y)
-        y *= TARGET_SFX_LOUD / max(loud_segment(y, sr), 1e-9)   # 限幅後補一次
-        y = soft_limit(y)
+        y = x * (TARGET_SFX_LOUD / max(before, 1e-9))    # ★只調音量，不壓縮
+        pk = float(np.max(np.abs(y)))
+        if pk > 0.95:                                     # 只有會削波才等比例壓回來
+            y = y * (0.95 / pk)
         write(path, y, sr, ch)
         z = decode(path, sr, ch)
         print(f"  {name:12s} 響段 {20*np.log10(before):6.1f} → "
