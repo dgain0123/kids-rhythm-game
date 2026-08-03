@@ -21,6 +21,18 @@ def chapters_in_game():
     return re.findall(r'title:\s*"([^"]+)"', block.group(1))
 
 
+def groups_in_game():
+    """同上，但連每個大關卡收哪些關一起讀出來 → [(章節名, ["level19", ...]), ...]。"""
+    src = open(os.path.join(PROJ, "js", "main.js"), encoding="utf-8").read()
+    block = re.search(r"const GROUPS = \[(.*?)\n\];", src, re.S)
+    assert block, "js/main.js 找不到 GROUPS 定義"
+    out = []
+    for title, levels in re.findall(r'title:\s*"([^"]+)",\s*levels:\s*\[(.*?)\]',
+                                    block.group(1), re.S):
+        out.append((title, re.findall(r'"(level\d+)"', levels)))
+    return out
+
+
 def test_every_chapter_has_its_own_style():
     titles = chapters_in_game()
     assert titles, "至少要有一個大關卡"
@@ -271,6 +283,53 @@ def test_material_tempo_follows_hit():
             assert abs(k - round(k)) < 1e-6 and round(k) >= 1, (
                 f"{name}：一小節 {bar:g} 秒不是拍點間隔 {hit:g} 秒的整數倍"
                 f"（{k:.4f} 倍）——小節線會落在拍點之間，整首愈跑愈偏")
+
+
+def _music_beat_sec(mod, style):
+    """這關「音樂的一拍」有多長（秒）——愈小＝音樂愈快。
+    自製 render 的章節：一小節 BAR 秒 ÷ 每小節拍數；其餘：音樂本來就長在拍點格子上＝HIT。"""
+    hit, bar = getattr(mod, "HIT", None), getattr(mod, "BAR", None)
+    bpb = getattr(style, "beats_per_bar", None) if style is not None else None
+    if bar is not None and bpb:
+        return bar / bpb
+    return hit if hit is not None else bar
+
+
+def test_music_tempo_increases_with_level_speed():
+    """**同一個大關卡裡，關卡愈快、音樂就要愈快——不可以一樣快，更不可以反過來。**
+    （2026-08-03 使用者裁示：「慢速的音樂速度不能等於或超過後面比較快速的音樂」）
+
+    踩過的坑：第22關（速度30）為了不要太趕，把音樂從 270BPM 降到 90BPM，結果變成
+    速度10 的音樂（當時 90BPM）跟速度30 一樣快、還比速度20（60BPM）快 → 使用者說很奇怪。
+    現在第二大關卡統一「一拍＝一個拍點」＝ 30/60/90BPM，這條測試就是防止再回頭。
+
+    做法：比較每一關「音樂的一拍幾秒」（見 `_music_beat_sec`），依關卡速度排序後，
+    後面的關卡一定要嚴格更短（＝音樂更快）。
+    """
+    import importlib
+    for title, levels in groups_in_game():
+        rows = []
+        for lv in levels:
+            gen = os.path.join(PROJ, "tools", f"make_{lv}_music.py")
+            chart_path = os.path.join(PROJ, "charts", f"{lv}.json")
+            if not os.path.exists(gen) or not os.path.exists(chart_path):
+                continue
+            chart = json.load(open(chart_path, encoding="utf-8"))
+            if "bpm" not in chart:
+                continue                          # 數下數關卡不配速度
+            mod = importlib.import_module(f"make_{lv}_music")
+            beat = _music_beat_sec(mod, getattr(mod, "STYLE", None))
+            assert beat, f"make_{lv}_music.py 看不出音樂的一拍多長（要有 HIT 或 BAR）"
+            rows.append((chart["bpm"], lv, beat))
+        rows.sort()
+        for (bpm_a, a, beat_a), (bpm_b, b, beat_b) in zip(rows, rows[1:]):
+            if bpm_a == bpm_b:
+                continue
+            assert beat_b < beat_a - 1e-9, (
+                f"{title}：{a}（速度{bpm_a:g}）的音樂 {60 / beat_a:.0f}BPM，"
+                f"{b}（速度{bpm_b:g}）卻只有 {60 / beat_b:.0f}BPM —— "
+                f"**慢的關卡音樂不可以跟後面快的關卡一樣快或更快**"
+                f"（規矩見 docs/關卡音樂.md；第二大關卡的解法是「一拍＝一個拍點」）")
 
 
 def test_music_outlasts_last_note_window():
