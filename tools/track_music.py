@@ -131,7 +131,8 @@ def render(style, hit_sec, n_hits, out_path, lead_hits=4, pre=1.0, tail=4.0,
 
     style.aligned_render=True（**自製 MIDI 用 SoundFont render 出來的素材**）時：
     我們自己決定的速度，本來就精準對齊拍點 → 跳過偵測與變速，直接把音樂放在第一個拍點上。"""
-    src = os.path.join(SOURCE_DIR, style.source)
+    name = style.source_for(hit_sec) if hasattr(style, "source_for") else style.source
+    src = os.path.join(SOURCE_DIR, name)
     y, _ = librosa.load(src, sr=sr, mono=True)
 
     if getattr(style, "aligned_render", False):
@@ -156,7 +157,7 @@ def render(style, hit_sec, n_hits, out_path, lead_hits=4, pre=1.0, tail=4.0,
         for k in range(n_hits):                 # 節拍器只在拍點上
             style.click(mx, pre + (lead_hits + k) * hit_sec)
         secs = mx.finish(out_path, clean=True)  # ★整軌也不壓縮，只等比例調音量
-        return secs, (f"素材 {style.source}：自製 MIDI＋SoundFont render(乾聲)，"
+        return secs, (f"素材 {name}：自製 MIDI＋SoundFont render(乾聲)，"
                       f"速度本來就對齊拍點 → 不偵測、不變速；音樂自 {t0:.0f} 秒進場")
 
     period, contrast0, _, _, _ = estimate_period(y, sr)

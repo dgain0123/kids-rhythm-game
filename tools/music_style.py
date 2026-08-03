@@ -579,12 +579,17 @@ class LullabyMarimbaStyle(Style):
     key = "C 大調 3/4 華爾滋(90BPM，一小節＝一個拍點)"
     instruments = "馬林巴取樣音源(GeneralUser GS)：旋律＋分解和弦＋低音"
     metronome = "木魚 1100Hz（與第一大關卡相同，使用者裁示）"
-    source = "lullaby_marimba_render.wav"
+    source = "lullaby_marimba_hit2s.wav"      # 預設(速度10)；各關依拍點間隔取對應 render
     license = "公共領域旋律(布拉姆斯 1868)＋自製編曲；音源 GeneralUser GS 允許自由使用含商用"
     credit = ("Lullaby (Brahms, public domain melody) — 自製 MIDI 編曲，"
               "以 GeneralUser GS SoundFont (S. Christian Collins) 離線 render")
     source_url = "https://github.com/mrbumpy409/GeneralUser-GS"
     ui_credit = "布拉姆斯搖籃曲（公共領域）· 音源 GeneralUser GS"
+
+    def source_for(self, hit_sec):
+        """同一首搖籃曲、每個速度各 render 一份（一小節＝一個拍點）。
+        由 tools/make_lullaby_render.py 產生，命名 lullaby_marimba_hit<秒>s.wav。"""
+        return f"lullaby_marimba_hit{hit_sec:g}s.wav"
 
     def click(self, mx, t, vol=0.28):
         """**跟第一大關卡用同一個木魚**（1100Hz，衰減 30ms，音量 0.28）——
