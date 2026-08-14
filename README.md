@@ -69,7 +69,8 @@ python3 tools/retempo_midi.py --src midi/第23關.mid --bpm 50 -o midi/第24關.
 
 選項：`--only kick,snare,hihat,tom,cymbal`、`--bars N`、`--max-hits N`、`--title`、`--hint`、
 `--count-mode`（數下數關卡：不輸出 bpm/beat，遊戲只看打幾下、不判拍子）。
-音符時值認得四分/八分/**三連音**（`triplet`＝1/3 拍，三顆一組，譜面自動連樑並標「3」）。
+音符時值認得四分/八分/**三連音**（`triplet`＝1/3 拍，三顆一組，譜面自動連樑並標「3」）/
+**十六分**（`sixteenth`＝1/4 拍，四顆一組雙符樑）。
 轉檔行為由 `tests/test_mid2json.py` 釘住，`tests/guard_test.py` 為守門入口（改 .py 會自動跑）。
 
 目前 `charts/level1.json` 為手寫範例：

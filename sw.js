@@ -14,12 +14,14 @@ const CORE = [
   "./charts/level9.json", "./charts/level10.json", "./charts/level11.json", "./charts/level12.json", "./charts/level13.json", "./charts/level14.json", "./charts/level15.json", "./charts/level16.json", "./charts/level17.json", "./charts/level18.json",
   "./charts/level19.json", "./charts/level20.json", "./charts/level21.json", "./charts/level22.json", "./charts/level23.json",
   "./charts/level24.json", "./charts/level25.json", "./charts/level26.json", "./charts/level27.json", "./charts/level28.json", "./charts/level29.json",
+  "./charts/level30.json", "./charts/level31.json", "./charts/level32.json", "./charts/level33.json", "./charts/level34.json", "./charts/level35.json", "./charts/level36.json", "./charts/level37.json", "./charts/level38.json", "./charts/level39.json", "./charts/level40.json",
   "./characters/index.json", "./characters/cat.png", "./characters/rabbit.png",
   "./sounds/cheer.wav", "./sounds/cheer.mp3", "./sounds/fail.wav",
   "./sounds/music/level9.m4a", "./sounds/music/level10.m4a", "./sounds/music/level11.m4a",
   "./sounds/music/level12.m4a", "./sounds/music/level13.m4a", "./sounds/music/level14.m4a", "./sounds/music/level15.m4a", "./sounds/music/level16.m4a", "./sounds/music/level17.m4a", "./sounds/music/level18.m4a",
   "./sounds/music/level20.m4a", "./sounds/music/level21.m4a", "./sounds/music/level22.m4a", "./sounds/music/level23.m4a",
   "./sounds/music/level24.m4a", "./sounds/music/level25.m4a", "./sounds/music/level26.m4a", "./sounds/music/level27.m4a", "./sounds/music/level28.m4a", "./sounds/music/level29.m4a",
+  "./sounds/music/level31.m4a", "./sounds/music/level32.m4a", "./sounds/music/level33.m4a", "./sounds/music/level34.m4a", "./sounds/music/level35.m4a", "./sounds/music/level36.m4a", "./sounds/music/level37.m4a", "./sounds/music/level38.m4a", "./sounds/music/level39.m4a", "./sounds/music/level40.m4a",
   "./manifest.webmanifest", "./icon-192.png", "./icon-512.png",
 ];
 

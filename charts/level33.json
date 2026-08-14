@@ -1,0 +1,258 @@
+{
+  "title": "速度30",
+  "bpm": 30.0,
+  "maxHits": 49,
+  "notes": [
+    {
+      "type": "sixteenth",
+      "drum": "snare",
+      "beat": 0.0
+    },
+    {
+      "type": "sixteenth",
+      "drum": "snare",
+      "beat": 0.25
+    },
+    {
+      "type": "sixteenth",
+      "drum": "snare",
+      "beat": 0.5
+    },
+    {
+      "type": "sixteenth",
+      "drum": "snare",
+      "beat": 0.75
+    },
+    {
+      "type": "sixteenth",
+      "drum": "snare",
+      "beat": 1.0
+    },
+    {
+      "type": "sixteenth",
+      "drum": "snare",
+      "beat": 1.25
+    },
+    {
+      "type": "sixteenth",
+      "drum": "snare",
+      "beat": 1.5
+    },
+    {
+      "type": "sixteenth",
+      "drum": "snare",
+      "beat": 1.75
+    },
+    {
+      "type": "sixteenth",
+      "drum": "snare",
+      "beat": 2.0
+    },
+    {
+      "type": "sixteenth",
+      "drum": "snare",
+      "beat": 2.25
+    },
+    {
+      "type": "sixteenth",
+      "drum": "snare",
+      "beat": 2.5
+    },
+    {
+      "type": "sixteenth",
+      "drum": "snare",
+      "beat": 2.75
+    },
+    {
+      "type": "sixteenth",
+      "drum": "snare",
+      "beat": 3.0
+    },
+    {
+      "type": "sixteenth",
+      "drum": "snare",
+      "beat": 3.25
+    },
+    {
+      "type": "sixteenth",
+      "drum": "snare",
+      "beat": 3.5
+    },
+    {
+      "type": "sixteenth",
+      "drum": "snare",
+      "beat": 3.75
+    },
+    {
+      "type": "sixteenth",
+      "drum": "snare",
+      "beat": 4.0
+    },
+    {
+      "type": "sixteenth",
+      "drum": "snare",
+      "beat": 4.25
+    },
+    {
+      "type": "sixteenth",
+      "drum": "snare",
+      "beat": 4.5
+    },
+    {
+      "type": "sixteenth",
+      "drum": "snare",
+      "beat": 4.75
+    },
+    {
+      "type": "sixteenth",
+      "drum": "snare",
+      "beat": 5.0
+    },
+    {
+      "type": "sixteenth",
+      "drum": "snare",
+      "beat": 5.25
+    },
+    {
+      "type": "sixteenth",
+      "drum": "snare",
+      "beat": 5.5
+    },
+    {
+      "type": "sixteenth",
+      "drum": "snare",
+      "beat": 5.75
+    },
+    {
+      "type": "sixteenth",
+      "drum": "snare",
+      "beat": 6.0
+    },
+    {
+      "type": "sixteenth",
+      "drum": "snare",
+      "beat": 6.25
+    },
+    {
+      "type": "sixteenth",
+      "drum": "snare",
+      "beat": 6.5
+    },
+    {
+      "type": "sixteenth",
+      "drum": "snare",
+      "beat": 6.75
+    },
+    {
+      "type": "sixteenth",
+      "drum": "snare",
+      "beat": 7.0
+    },
+    {
+      "type": "sixteenth",
+      "drum": "snare",
+      "beat": 7.25
+    },
+    {
+      "type": "sixteenth",
+      "drum": "snare",
+      "beat": 7.5
+    },
+    {
+      "type": "sixteenth",
+      "drum": "snare",
+      "beat": 7.75
+    },
+    {
+      "type": "sixteenth",
+      "drum": "snare",
+      "beat": 8.0
+    },
+    {
+      "type": "sixteenth",
+      "drum": "snare",
+      "beat": 8.25
+    },
+    {
+      "type": "sixteenth",
+      "drum": "snare",
+      "beat": 8.5
+    },
+    {
+      "type": "sixteenth",
+      "drum": "snare",
+      "beat": 8.75
+    },
+    {
+      "type": "sixteenth",
+      "drum": "snare",
+      "beat": 9.0
+    },
+    {
+      "type": "sixteenth",
+      "drum": "snare",
+      "beat": 9.25
+    },
+    {
+      "type": "sixteenth",
+      "drum": "snare",
+      "beat": 9.5
+    },
+    {
+      "type": "sixteenth",
+      "drum": "snare",
+      "beat": 9.75
+    },
+    {
+      "type": "sixteenth",
+      "drum": "snare",
+      "beat": 10.0
+    },
+    {
+      "type": "sixteenth",
+      "drum": "snare",
+      "beat": 10.25
+    },
+    {
+      "type": "sixteenth",
+      "drum": "snare",
+      "beat": 10.5
+    },
+    {
+      "type": "sixteenth",
+      "drum": "snare",
+      "beat": 10.75
+    },
+    {
+      "type": "sixteenth",
+      "drum": "snare",
+      "beat": 11.0
+    },
+    {
+      "type": "sixteenth",
+      "drum": "snare",
+      "beat": 11.25
+    },
+    {
+      "type": "sixteenth",
+      "drum": "snare",
+      "beat": 11.5
+    },
+    {
+      "type": "sixteenth",
+      "drum": "snare",
+      "beat": 11.75
+    },
+    {
+      "type": "quarter",
+      "drum": "snare",
+      "beat": 12.0
+    }
+  ],
+  "hint": "快一點！四個一組，最後一下長音～",
+  "toleranceBeats": 0.25,
+  "music": "./sounds/music/level33.m4a",
+  "leadInSec": 3.0,
+  "metronome": "sixteenth",
+  "preRollSec": 1.0
+}

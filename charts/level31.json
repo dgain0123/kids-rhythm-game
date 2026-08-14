@@ -1,0 +1,98 @@
+{
+  "title": "速度10",
+  "bpm": 10.0,
+  "maxHits": 17,
+  "notes": [
+    {
+      "type": "sixteenth",
+      "drum": "snare",
+      "beat": 0.0
+    },
+    {
+      "type": "sixteenth",
+      "drum": "snare",
+      "beat": 0.25
+    },
+    {
+      "type": "sixteenth",
+      "drum": "snare",
+      "beat": 0.5
+    },
+    {
+      "type": "sixteenth",
+      "drum": "snare",
+      "beat": 0.75
+    },
+    {
+      "type": "sixteenth",
+      "drum": "snare",
+      "beat": 1.0
+    },
+    {
+      "type": "sixteenth",
+      "drum": "snare",
+      "beat": 1.25
+    },
+    {
+      "type": "sixteenth",
+      "drum": "snare",
+      "beat": 1.5
+    },
+    {
+      "type": "sixteenth",
+      "drum": "snare",
+      "beat": 1.75
+    },
+    {
+      "type": "sixteenth",
+      "drum": "snare",
+      "beat": 2.0
+    },
+    {
+      "type": "sixteenth",
+      "drum": "snare",
+      "beat": 2.25
+    },
+    {
+      "type": "sixteenth",
+      "drum": "snare",
+      "beat": 2.5
+    },
+    {
+      "type": "sixteenth",
+      "drum": "snare",
+      "beat": 2.75
+    },
+    {
+      "type": "sixteenth",
+      "drum": "snare",
+      "beat": 3.0
+    },
+    {
+      "type": "sixteenth",
+      "drum": "snare",
+      "beat": 3.25
+    },
+    {
+      "type": "sixteenth",
+      "drum": "snare",
+      "beat": 3.5
+    },
+    {
+      "type": "sixteenth",
+      "drum": "snare",
+      "beat": 3.75
+    },
+    {
+      "type": "quarter",
+      "drum": "snare",
+      "beat": 4.0
+    }
+  ],
+  "hint": "跟著音樂：四個一組，最後一下長音～",
+  "toleranceBeats": 0.25,
+  "music": "./sounds/music/level31.m4a",
+  "leadInSec": 7.0,
+  "metronome": "sixteenth",
+  "preRollSec": 1.0
+}

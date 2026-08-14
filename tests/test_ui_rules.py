@@ -74,6 +74,19 @@ def test_triplet_drawing_rules():
     assert "MIN_NOTE_PX = 32" in src, "相鄰音符最小間距規則不見了，密譜符頭會疊在一起"
 
 
+def test_sixteenth_drawing_rules():
+    """**十六分音符：四顆一組雙符樑、落單雙旗、時值 0.25**（第三大關「第一行第三小節」用）。"""
+    src = read("js", "render.js")
+    assert "sixteenth: 0.25" in src, "render 的時值表要有 sixteenth(1/4 拍)"
+    assert 'list[i].type === "sixteenth"' in src, "連樑邏輯要有十六分音符分支(不然會變光桿沒符樑)"
+    m = re.search(r'"sixteenth"\)\s*\{(.*?)\}\s*else i\+\+;', src, re.S)
+    assert m, "十六分音符分支要在連樑迴圈裡"
+    body = m.group(1)
+    assert body.count("drawBeam") == 2, "十六分音符成組要畫**兩條**符樑(雙樑)"
+    assert body.count("drawFlag") == 2, "十六分音符落單要畫**兩面**旗(雙旗)"
+    assert "k < 4" in body, "十六分音符最多四顆一組(一拍)"
+
+
 if __name__ == "__main__":
     for name, fn in sorted(globals().items()):
         if name.startswith("test_") and callable(fn):

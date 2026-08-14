@@ -607,6 +607,35 @@ class LullabyMarimbaStyle(Style):
         mx.add(t, s * mx.env_ad(n, 0.002, 0.03) * vol)
 
 
+# ── 第三大關卡「第一行第三小節」：自製小星星 MIDI＋SoundFont(乾聲)，尼龍吉他，F 大調 ──
+class TwinkleGuitarStyle(LullabyMarimbaStyle):
+    """繼承第二章的殼＝拿它的 aligned_render 與**木魚 click**（各章共用節拍器，
+    2026-08-03 使用者裁示）；曲目/調性/樂器/編曲全換。
+    2026-08-14 使用者從三個候選（小星星・尼龍吉他／瑪莉小綿羊・直笛／倫敦鐵橋・手風琴）
+    試聽選定本款。"""
+    beats_per_bar = 4          # 4/4；**一拍＝一個拍點**(BAR = 4 × HIT)
+    name = "小星星・尼龍吉他(自製 render)"
+    key = "F 大調 4/4(一拍＝一個拍點，音樂速度＝關卡速度×4：40~400BPM)"
+    instruments = "尼龍弦吉他取樣音源(GeneralUser GS)：旋律＋和弦輕刷＋原聲貝斯＋輕弦樂墊"
+    source = "twinkle_guitar_hit6s.wav"       # 預設(速度10)；各關依拍點間隔取對應 render
+    license = "公共領域旋律(法國民謠 18 世紀)＋自製編曲；音源 GeneralUser GS 允許自由使用含商用"
+    credit = ("Twinkle Twinkle Little Star (public domain melody) — 自製 MIDI 編曲，"
+              "以 GeneralUser GS SoundFont (S. Christian Collins) 離線 render")
+    ui_credit = "小星星（公共領域）· 音源 GeneralUser GS"
+    # 和聲進行(F/Bb/C)：記錄用＋守門「任兩章和聲進行不可一樣」的比對用
+    # (實際編排在 tools/make_twinkle_render.py 的 BARS/CHORDS)
+    prog = [
+        {"chord": ("F3", "A3", "C4"), "bass": "F2", "hits": ("F4",)},
+        {"chord": ("F3", "Bb3", "D4"), "bass": "Bb2", "hits": ("Bb4",)},
+        {"chord": ("E3", "G3", "C4"), "bass": "C3", "hits": ("C5",)},
+    ]
+
+    def source_for(self, bar_sec):
+        """同一首小星星、每個速度各 render 一份；`bar_sec`＝素材一小節的秒數
+        （＝4 × 該關拍點間隔）。由 tools/make_twinkle_render.py 產生。"""
+        return f"twinkle_guitar_hit{bar_sec:g}s.wav"
+
+
 # 備用風格(之後開新章節可直接用或當範本)：合成三款 + 用過/試過的現成曲目
 CANDIDATES = {"音樂盒": MusicBoxStyle(), "馬林巴": MarimbaStyle(), "撥弦": PluckStyle(),
               "旋轉木馬風琴": CarouselOrganStyle(), "Fluffing a Duck": FluffingDuckStyle(),
@@ -616,7 +645,8 @@ CANDIDATES = {"音樂盒": MusicBoxStyle(), "馬林巴": MarimbaStyle(), "撥弦
 #   (漏加或跟別章重複 → tests/test_music_style.py 紅 → 守門擋下)
 STYLES = {
     1: ChimePadStyle(),         # 第一行第一小節(level9~18)：程式合成
-    2: LullabyMarimbaStyle(),   # 第一行第二小節(level20~)：自製兒歌MIDI+SoundFont(乾聲)
+    2: LullabyMarimbaStyle(),   # 第一行第二小節(level20~29)：自製兒歌MIDI+SoundFont(乾聲)
+    3: TwinkleGuitarStyle(),    # 第一行第三小節(level31~)：自製小星星MIDI+SoundFont(乾聲)
 }
 
 

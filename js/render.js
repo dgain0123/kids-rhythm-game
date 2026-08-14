@@ -207,6 +207,7 @@ export function drawNotes(canvas, notes, state = {}) {
 
   // 八分音符：每「兩個一組」(一拍)打符樑，組跟組分開；落單的畫旗子(不跨小節連樑)
   // 三連音：每「三個一組」(一拍)打符樑，符樑上方標「3」
+  // 十六分音符：每「四個一組」(一拍)打雙符樑；落單的畫雙旗
   const yTop = cy - STEM_LEN;
   let i = 0;
   while (i < n) {
@@ -223,6 +224,18 @@ export function drawNotes(canvas, notes, state = {}) {
       if (k >= 2) drawBeam(ctx, xs[i] + STEM_DX, xs[i + k - 1] + STEM_DX, yTop);
       else drawFlag(ctx, xs[i], cy);
       drawTupletNum(ctx, (xs[i] + xs[i + k - 1]) / 2 + STEM_DX, yTop);
+      i += k;
+    } else if (list[i].type === "sixteenth") {
+      let k = 1; // 同一小節內最多連四顆＝一拍
+      while (k < 4 && i + k < n && list[i + k].type === "sixteenth"
+             && barOf(starts[i]) === barOf(starts[i + k])) k++;
+      if (k >= 2) {
+        drawBeam(ctx, xs[i] + STEM_DX, xs[i + k - 1] + STEM_DX, yTop);      // 主樑
+        drawBeam(ctx, xs[i] + STEM_DX, xs[i + k - 1] + STEM_DX, yTop + 11); // 第二條樑＝十六分
+      } else {
+        drawFlag(ctx, xs[i], cy);
+        drawFlag(ctx, xs[i], cy + 12); // 第二面旗＝十六分
+      }
       i += k;
     } else i++;
   }

@@ -1,0 +1,71 @@
+{
+  "title": "打16下",
+  "maxHits": 16,
+  "notes": [
+    {
+      "type": "sixteenth",
+      "drum": "snare"
+    },
+    {
+      "type": "sixteenth",
+      "drum": "snare"
+    },
+    {
+      "type": "sixteenth",
+      "drum": "snare"
+    },
+    {
+      "type": "sixteenth",
+      "drum": "snare"
+    },
+    {
+      "type": "sixteenth",
+      "drum": "snare"
+    },
+    {
+      "type": "sixteenth",
+      "drum": "snare"
+    },
+    {
+      "type": "sixteenth",
+      "drum": "snare"
+    },
+    {
+      "type": "sixteenth",
+      "drum": "snare"
+    },
+    {
+      "type": "sixteenth",
+      "drum": "snare"
+    },
+    {
+      "type": "sixteenth",
+      "drum": "snare"
+    },
+    {
+      "type": "sixteenth",
+      "drum": "snare"
+    },
+    {
+      "type": "sixteenth",
+      "drum": "snare"
+    },
+    {
+      "type": "sixteenth",
+      "drum": "snare"
+    },
+    {
+      "type": "sixteenth",
+      "drum": "snare"
+    },
+    {
+      "type": "sixteenth",
+      "drum": "snare"
+    },
+    {
+      "type": "sixteenth",
+      "drum": "snare"
+    }
+  ],
+  "hint": "四個一組的十六分音符，一共打16下鼓！"
+}
