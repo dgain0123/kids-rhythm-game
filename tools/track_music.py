@@ -121,14 +121,18 @@ def pick_rate(period, hit_sec):
     return best[1], best[2]
 
 
-def end_at_last_hit(seg, t_last, sr, hold=0.30, release=0.05):
-    """★音樂到最後一下就結束（2026-08-14 使用者裁示「後面不要再有音樂」；
-    同日再裁示**終止音直接停、不要長音衰減**→hold 0.3 秒後 0.05 秒去喀聲切掉）。
+def end_at_last_hit(seg, t_last, sr, hit_sec=None):
+    """★音樂到最後一下就結束（2026-08-14 使用者三段裁示收斂）：
+    「後面不要再有音樂」→「不要長音衰減、直接停」→
+    **「最後那拍的正拍的第一個音就要結束」**＝終止音只響正拍那一聲(斷音)。
 
-    `t_last`＝最後一下相對 seg 起點的秒數。最後那顆音留 `hold` 秒聲頭，
-    接 `release` 秒極短淡出(只為去喀聲)，之後**全零**——檔案其餘長度是靜音緩衝，
-    這樣容許窗照樣開滿(守門⑥的檔長規則不變)。
+    `t_last`＝最後一下相對 seg 起點的秒數。聲頭 hold＝min(0.12 秒, 0.7×拍點間隔)
+    ——後者保證**切在下一個拍點的音之前**（快速關卡 0.3 秒裡會混進下2個拍點音，
+    使用者聽出來）；接 0.03 秒極短淡出(只為去喀聲)，之後**全零**——
+    檔案其餘長度是靜音緩衝，容許窗照樣開滿(守門⑥的檔長規則不變)。
     守門：tests/test_music_style.py 的 test_music_ends_at_last_note。"""
+    hold = min(0.12, 0.7 * hit_sec) if hit_sec else 0.12
+    release = 0.03
     seg = seg.copy()
     i0 = int((t_last + hold) * sr)
     i1 = min(len(seg), int((t_last + hold + release) * sr))
@@ -181,7 +185,7 @@ def render(style, hit_sec, n_hits, out_path, lead_hits=4, pre=1.0, tail=4.0,
         # ★**音樂到最後一下就結束**（2026-08-14 使用者裁示：「後面不要再有音樂」）——
         # 最後一下的那顆音照放(終止感)，0.15 秒後開 1.2 秒餘弦淡出、之後全零；
         # 檔案總長不變(最後一下之後是**靜音緩衝**，容許窗要開滿，守門⑥)。
-        seg = end_at_last_hit(seg, (n_hits - 1) * hit_sec, sr)
+        seg = end_at_last_hit(seg, (n_hits - 1) * hit_sec, sr, hit_sec=hit_sec)
         # ★**完全不壓縮**（2026-08-03 使用者裁示：「壓縮要拿掉」）——
         # 壓縮會吃掉動態(實測把 14.7dB 的 crest factor 壓成 6.7dB)並把雜訊抬起來。
         # 這裡只做「等比例調音量」：在不削波的前提下盡量推大(峰值上限 CLEAN_PEAK)。
@@ -238,7 +242,7 @@ def render(style, hit_sec, n_hits, out_path, lead_hits=4, pre=1.0, tail=4.0,
     if len(seg) < need:                              # 不夠長就接續循環
         seg = np.tile(seg, int(np.ceil(need / len(seg))))
     # 音樂到最後一下就結束(同 aligned 路線；seg 起點=pre，最後一下在 lead_span+(n-1)hit)
-    seg = end_at_last_hit(seg[:need], lead_span + (n_hits - 1) * hit_sec, sr)
+    seg = end_at_last_hit(seg[:need], lead_span + (n_hits - 1) * hit_sec, sr, hit_sec=hit_sec)
     mx.buf[int(pre * sr):] += seg[:need] * music_gain
 
     # 預備拍人聲(騎在音樂上)：不修剪、用起音點對齊拍點
