@@ -87,6 +87,15 @@ def test_audio_clock_sync_rules():
         "musicNow() 要扣輸出延遲（耳朵聽到的時刻才是唯一時鐘）"
 
 
+def test_fail_settles_at_last_note_window():
+    """**失敗也要停在最後一下**（2026-08-14 使用者裁示）：最後一顆的容許窗一關
+    (至少讓 1.35 秒終止音衰減完)就立刻 finishSong 結算，不乾等檔尾靜音；
+    音檔 onended 只是備援。"""
+    src = read("js", "main.js")
+    assert "Math.max(game.tolSec, 1.35)" in src, "endT 要至少涵蓋終止音衰減 1.35 秒"
+    assert re.search(r"t >= endT.*finishSong\(\)", src), "容許窗一關就要立刻結算(endT)"
+
+
 def test_sixteenth_drawing_rules():
     """**十六分音符：四顆一組雙符樑、落單雙旗、時值 0.25**（第三大關「第一行第三小節」用）。"""
     src = read("js", "render.js")

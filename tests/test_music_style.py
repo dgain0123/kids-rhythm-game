@@ -375,9 +375,9 @@ def test_music_ends_at_last_note():
 def test_music_outlasts_last_note_window():
     """音樂一定要放完最後一顆音符的**整個容許窗**才結束。
 
-    音樂放完還有沒打到的音符 → 遊戲直接判失敗（見 docs/關卡系統.md 判定），
-    所以「音樂長度 ≥ 最後一下 + 容許值」不成立的話，小朋友打在容許窗後半段
-    根本來不及被算到。做新關卡最容易漏的就是這條（tail 給太短、lead-in 算錯）。
+    正式結算＝容許窗一關的 endT（main.js），但音檔 onended 是備援——檔案提早放完
+    會提前結算，「音樂長度 ≥ 最後一下 + 容許值」不成立的話，小朋友打在容許窗
+    後半段根本來不及被算到。做新關卡最容易漏的就是這條（tail 給太短、lead-in 算錯）。
     """
     import glob
     import shutil

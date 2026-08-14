@@ -161,6 +161,10 @@ function startTimedLoop() {
   const step = lead > pre ? (lead - pre) / 4 : 1; // 預備拍 4 聲
   let frame = 0;
   const scrolls = needsScroll(chart.notes); // 超過4小節→譜面每幀跟著捲
+  // 結算時刻：音樂(聲音)本來就在最後一下結束(end_at_last_hit)，檔尾只剩靜音緩衝——
+  // 最後一顆的容許窗一關(至少讓 1.35 秒終止音衰減完)就立刻判過關/失敗，
+  // 不乾等檔尾靜音(2026-08-14 使用者裁示「失敗也要停在最後一下」)
+  const endT = game.noteTimes[game.noteTimes.length - 1] + Math.max(game.tolSec, 1.35) + 0.15;
   const tick = () => {
     rafId = null;
     if (!game || !game.timed || !musicSrc) return;
@@ -168,6 +172,7 @@ function startTimedLoop() {
     frame++;
     const ct = musicNow();
     const t = ct - lead;
+    if (t >= endT) { game.finishSong(); return; }   // onState 會停音樂+播結果音
     if (lead > 0 && ct < lead) {
       if (ct < pre) {
         els.countdown.hidden = true; // 緩衝期還沒開始數

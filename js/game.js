@@ -9,7 +9,7 @@
 // 【跟拍模式】(chart 有 bpm 且音符有 beat 時)
 //   每個音符有自己的時間點(beat × 60/bpm 秒)；打的那一下依「音樂時間」
 //   歸給最近的還沒打到的音符，誤差在 toleranceBeats(預設半拍)以內才算。
-//   全部音符都打到 → 過關；音樂放完還有沒打到的 → 失敗。
+//   全部音符都打到 → 過關；最後一顆的容許窗關了還有沒打到的 → 立刻失敗(不等檔尾)。
 //   打錯時間點的多餘打擊不懲罰(幼兒友善)，只是不算。
 
 export class Game {
@@ -84,7 +84,8 @@ export class Game {
     else this._setState("progress");
   }
 
-  // 跟拍模式：音樂放完時呼叫。還有沒打到的音符 → 失敗
+  // 跟拍模式：最後一顆的容許窗關閉(main.js 的 endT)或音樂放完(備援)時呼叫。
+  // 還有沒打到的音符 → 失敗
   finishSong() {
     if (!this.timed) return;
     if (this.state === "pass" || this.state === "fail") return;
