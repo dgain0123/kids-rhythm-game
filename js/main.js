@@ -113,9 +113,16 @@ function syncStageLane() {
 function isTimedChart(c) {
   return !!(c && c.bpm && Array.isArray(c.notes) && c.notes.length && c.notes[0].beat != null);
 }
-// 音樂目前播到第幾秒(以 AudioContext 的時鐘為準，唯一時鐘)
+// 喇叭的輸出延遲：ctx.currentTime 代表「正在渲染」的音訊，真正從喇叭出來還要晚這麼多。
+// 不補償的話，圖示進圈中心/亮燈會比「耳朵聽到的拍點」早幾十 ms（2026-08-14 使用者
+// 在第二大關聽出來）。outputLatency 沒有(Safari)就退用 baseLatency；上限防瀏覽器亂報。
+function outLatencySec() {
+  if (!audioCtx) return 0;
+  return Math.min(audioCtx.outputLatency || audioCtx.baseLatency || 0, 0.35);
+}
+// 音樂目前播到第幾秒(以 AudioContext 的時鐘為準，唯一時鐘；已扣輸出延遲＝耳朵聽到的時刻)
 function musicNow() {
-  return musicSrc && audioCtx ? audioCtx.currentTime - musicT0 : 0;
+  return musicSrc && audioCtx ? audioCtx.currentTime - musicT0 - outLatencySec() : 0;
 }
 // 譜面時間 = 音樂播放時間 - 預備拍長度(音樂檔前面有預備拍)
 function chartTimeNow() {
@@ -680,8 +687,10 @@ async function startGame() {
     musicSrc.connect(ctx.destination);
     // 音樂放完＝這一輪結束：還有沒打到的音符就算失敗
     musicSrc.onended = () => { musicSrc = null; if (game) game.finishSong(); };
-    musicT0 = ctx.currentTime;
-    musicSrc.start();
+    // 排準起播：start() 不給時刻會「盡快」開始(下一個渲染量子，晚幾 ms 且不定)，
+    // musicT0 就會跟實際起點對不上 → 預留 80ms、用 start(musicT0) 準時起播
+    musicT0 = ctx.currentTime + 0.08;
+    musicSrc.start(musicT0);
     els.status.textContent = "預備～聽拍子！";
     startTimedLoop();
   }

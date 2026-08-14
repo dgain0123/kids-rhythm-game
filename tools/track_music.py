@@ -121,6 +121,24 @@ def pick_rate(period, hit_sec):
     return best[1], best[2]
 
 
+def end_at_last_hit(seg, t_last, sr, hold=0.15, release=1.2):
+    """★音樂到最後一下就結束（2026-08-14 使用者裁示「後面不要再有音樂」）。
+
+    `t_last`＝最後一下相對 seg 起點的秒數。最後那顆音留 `hold` 秒完整聲頭，
+    接 `release` 秒餘弦淡出(自然衰減感)，之後**全零**——檔案其餘長度是靜音緩衝，
+    這樣容許窗照樣開滿(音樂物件放完才判失敗，守門⑥的檔長規則不變)。
+    守門：tests/test_music_style.py 的 test_music_ends_at_last_note。"""
+    seg = seg.copy()
+    i0 = int((t_last + hold) * sr)
+    i1 = min(len(seg), int((t_last + hold + release) * sr))
+    if i0 < len(seg):
+        n = i1 - i0
+        if n > 0:
+            seg[i0:i1] *= np.cos(np.linspace(0, np.pi / 2, n)) ** 2
+        seg[i1:] = 0.0
+    return seg
+
+
 def render(style, hit_sec, n_hits, out_path, lead_hits=4, pre=1.0, tail=4.0,
            music_gain=0.55, voice_gain=0.30, sr=SR, max_drift=0.08, source_hit=None,
            count_sec=None):
@@ -159,6 +177,10 @@ def render(style, hit_sec, n_hits, out_path, lead_hits=4, pre=1.0, tail=4.0,
         # 壓縮器會把人聲連同它的編碼雜訊一起抬起來——使用者聽出來「人聲雜」(2026-08-03)。
         # 音樂先做好母帶，人聲與節拍器最後原封不動疊上去，最後只等比例調音量。
         seg = y[: int((len(mx.buf) / sr - t0) * sr)]
+        # ★**音樂到最後一下就結束**（2026-08-14 使用者裁示：「後面不要再有音樂」）——
+        # 最後一下的那顆音照放(終止感)，0.15 秒後開 1.2 秒餘弦淡出、之後全零；
+        # 檔案總長不變(最後一下之後是**靜音緩衝**，容許窗要開滿，守門⑥)。
+        seg = end_at_last_hit(seg, (n_hits - 1) * hit_sec, sr)
         # ★**完全不壓縮**（2026-08-03 使用者裁示：「壓縮要拿掉」）——
         # 壓縮會吃掉動態(實測把 14.7dB 的 crest factor 壓成 6.7dB)並把雜訊抬起來。
         # 這裡只做「等比例調音量」：在不削波的前提下盡量推大(峰值上限 CLEAN_PEAK)。
@@ -214,6 +236,8 @@ def render(style, hit_sec, n_hits, out_path, lead_hits=4, pre=1.0, tail=4.0,
     need = len(mx.buf) - int(pre * sr)
     if len(seg) < need:                              # 不夠長就接續循環
         seg = np.tile(seg, int(np.ceil(need / len(seg))))
+    # 音樂到最後一下就結束(同 aligned 路線；seg 起點=pre，最後一下在 lead_span+(n-1)hit)
+    seg = end_at_last_hit(seg[:need], lead_span + (n_hits - 1) * hit_sec, sr)
     mx.buf[int(pre * sr):] += seg[:need] * music_gain
 
     # 預備拍人聲(騎在音樂上)：不修剪、用起音點對齊拍點

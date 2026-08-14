@@ -10,7 +10,7 @@
     2.2–11.8s 伴奏：8 個和聲段 × 1.2 秒(C G Am F | C Am F G)＋11.8s 終止 C 和弦
              每 0.3 秒＝一個拍點：鐘聲走 根音(亮)→三音→五音→三音 循環
              ＋節拍器：八分音符(每 0.3 秒)一聲木魚 → 脈動不間斷
-    11.8–15.3s 終止和弦餘韻＋淡出
+    11.8–15.3s 終止和弦短衰減(1.35 秒)後全靜音
 
 規矩：預備拍固定 4 拍英文人聲；音樂含節拍器(細分=chart 的 metronome)。
 
@@ -132,6 +132,15 @@ def main():
     bass(END_T, F["C2"])
     bell(END_T, F["C6"], dur=2.5, vol=0.24)
     click(END_T, freq=1100, vol=0.28)
+
+    # ★2026-08-14 使用者裁示：音樂到最後一下就要結束、後面不要再有音樂——
+    # 終止那顆留 0.15 秒聲頭，接 1.2 秒餘弦淡出，之後全零(檔尾是靜音緩衝，
+    # 容許窗照樣開滿；守門 test_music_ends_at_last_note)
+    _i0 = int((END_T + 0.15) * SR)
+    _i1 = min(len(buf), int((END_T + 1.35) * SR))
+    if _i0 < len(buf):
+        buf[_i0:_i1] *= np.cos(np.linspace(0, np.pi / 2, _i1 - _i0)) ** 2
+        buf[_i1:] = 0.0
 
     fade = int(1.0 * SR)
     buf[-fade:] *= np.linspace(1, 0, fade)

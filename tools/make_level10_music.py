@@ -10,7 +10,7 @@
             每 1.5 秒＝一個拍點：小節頭放亮鐘聲(根音)、小節中放次亮鐘聲(五音)
             ＋節拍器：八分音符(每 1.5 秒)一聲木魚 → 整首 1.5 秒脈動不間斷
             最後一小節只留第 1 拍(第 17 下)，之後讓和弦收尾
-    33–34s  收尾淡出
+    33–34s  終止衰減後全靜音(2026-08-14 裁示)
 
 規矩：每個跟拍關卡的音樂都要含節拍器聲，細分每關可不同
 (第10關=eighth，記錄在 chart 的 metronome 欄位)。
@@ -129,6 +129,15 @@ def main():
             click(t0 + HIT, freq=1100, vol=0.28)
         for k, a in enumerate(bar["arp"]):
             bell(t0 + 0.75 + k * HIT, F[a], vol=0.08)
+
+    # ★2026-08-14 使用者裁示：音樂到最後一下就要結束、後面不要再有音樂——
+    # 終止那顆留 0.15 秒聲頭，接 1.2 秒餘弦淡出，之後全零(檔尾是靜音緩衝，
+    # 容許窗照樣開滿；守門 test_music_ends_at_last_note)
+    _i0 = int(((LEAD_IN + (BARS - 1) * BAR) + 0.15) * SR)
+    _i1 = min(len(buf), int(((LEAD_IN + (BARS - 1) * BAR) + 1.35) * SR))
+    if _i0 < len(buf):
+        buf[_i0:_i1] *= np.cos(np.linspace(0, np.pi / 2, _i1 - _i0)) ** 2
+        buf[_i1:] = 0.0
 
     fade = int(1.0 * SR)
     buf[-fade:] *= np.linspace(1, 0, fade)

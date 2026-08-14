@@ -17,7 +17,7 @@
     0–1s     開頭靜音緩衝(preRollSec，躲播放起頭暫態)
     1–9s     預備拍：英文人聲數拍 one/two/three/four(每 2 秒一聲＝拍點間隔，純人聲不疊節拍器)
     9–39s    音樂進場，13 個拍點(每 2 秒一下)，每個拍點一聲木魚
-    35–39s   收尾淡出(最後一下在 33 秒，留足夠時間給 ±2 秒容許窗)
+    35–39s   終止衰減後全靜音(2026-08-14 裁示)(最後一下在 33 秒，留足夠時間給 ±2 秒容許窗)
 
 用法：python3 tools/make_level20_music.py
 （素材重做：python3 tools/make_lullaby_render.py --hit 6 --bars 6）

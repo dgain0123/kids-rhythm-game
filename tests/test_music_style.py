@@ -332,6 +332,46 @@ def test_music_tempo_increases_with_level_speed():
                 f"（規矩見 docs/關卡音樂.md；第二大關卡的解法是「一拍＝一個拍點」）")
 
 
+def test_music_ends_at_last_note():
+    """★音樂到**最後一下**就要結束、後面不要再有音樂（2026-08-14 使用者裁示）。
+
+    做法＝最後那顆音留 0.15 秒聲頭 + 1.2 秒餘弦淡出，之後全零
+    （`track_music.end_at_last_hit`；ch1 合成產生器內建同款閘門）。
+    檔案總長**不變**：最後一下之後是靜音緩衝，容許窗照樣開滿（下一條測試釘檔長）。
+    這裡驗「最後一下 + 2 秒之後到檔尾」的每個 0.4 秒窗 RMS 都要 < -50dBFS＝無音樂。"""
+    import glob
+    import shutil
+    import subprocess
+
+    import numpy as np
+    if not shutil.which("ffmpeg"):
+        print("（跳過收尾檢查：沒有 ffmpeg）")
+        return
+    sr = 44100
+    for path in sorted(glob.glob(os.path.join(PROJ, "charts", "level*.json"))):
+        chart = json.load(open(path, encoding="utf-8"))
+        if "music" not in chart or "bpm" not in chart:
+            continue
+        name = os.path.basename(path)
+        spb = 60.0 / chart["bpm"]
+        last = chart.get("leadInSec", 0) + chart["notes"][-1]["beat"] * spb
+        music = os.path.join(PROJ, chart["music"].lstrip("./"))
+        raw = subprocess.run(["ffmpeg", "-v", "quiet", "-i", music, "-ac", "1",
+                              "-ar", str(sr), "-f", "f32le", "-"],
+                             capture_output=True, check=True).stdout
+        y = np.frombuffer(raw, dtype="<f4").astype(float)
+        seg = y[int((last + 2.0) * sr):]
+        if len(seg) < sr // 5:
+            continue
+        n = int(0.4 * sr)
+        worst = max(float(np.sqrt(np.mean(seg[i:i + n] ** 2)))
+                    for i in range(0, max(1, len(seg) - n), n))
+        db = 20 * np.log10(max(worst, 1e-9))
+        assert db < -50.0, (
+            f"{name}：最後一下({last:.1f}s)+2 秒之後還有聲音({db:.0f} dBFS ≥ -50)——"
+            f"音樂要到最後一下就結束(產生器要走 end_at_last_hit 閘門)")
+
+
 def test_music_outlasts_last_note_window():
     """音樂一定要放完最後一顆音符的**整個容許窗**才結束。
 

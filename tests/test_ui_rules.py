@@ -74,6 +74,19 @@ def test_triplet_drawing_rules():
     assert "MIN_NOTE_PX = 32" in src, "相鄰音符最小間距規則不見了，密譜符頭會疊在一起"
 
 
+def test_audio_clock_sync_rules():
+    """**畫面與耳朵同步**（2026-08-14 使用者在第二大關聽出「有點沒對到」後定案）：
+    ① 音樂要**排準起播**：`start(musicT0)`（不給時刻會晚幾 ms 且不定，時鐘就對不上）
+    ② 時鐘要**扣輸出延遲**（outputLatency，Safari 退用 baseLatency）——
+       ctx.currentTime 是「正在渲染」，喇叭出聲還要再晚，不扣的話圖示進圈/亮燈
+       都比聽到的拍點早幾十 ms。這是「往後補償」，不是被打槍過的提前量。"""
+    src = read("js", "main.js")
+    assert "musicSrc.start(musicT0)" in src, "音樂要用 start(musicT0) 排準起播"
+    assert "outputLatency" in src and "baseLatency" in src, "要有輸出延遲補償(outLatencySec)"
+    assert re.search(r"currentTime - musicT0 - outLatencySec\(\)", src), \
+        "musicNow() 要扣輸出延遲（耳朵聽到的時刻才是唯一時鐘）"
+
+
 def test_sixteenth_drawing_rules():
     """**十六分音符：四顆一組雙符樑、落單雙旗、時值 0.25**（第三大關「第一行第三小節」用）。"""
     src = read("js", "render.js")
