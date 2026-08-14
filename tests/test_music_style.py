@@ -362,16 +362,73 @@ def test_music_ends_at_last_note():
                               "-ar", str(sr), "-f", "f32le", "-"],
                              capture_output=True, check=True).stdout
         y = np.frombuffer(raw, dtype="<f4").astype(float)
-        seg = y[int((last + 0.5) * sr):]
+        seg = y[int((last + 0.25) * sr):]
         if len(seg) < sr // 5:
             continue
-        n = int(0.4 * sr)
+        n = int(0.1 * sr)
         worst = max(float(np.sqrt(np.mean(seg[i:i + n] ** 2)))
                     for i in range(0, max(1, len(seg) - n), n))
         db = 20 * np.log10(max(worst, 1e-9))
         assert db < -50.0, (
-            f"{name}：最後一下({last:.1f}s)+0.5 秒之後還有聲音({db:.0f} dBFS ≥ -50)——"
+            f"{name}：最後一下({last:.1f}s)+0.25 秒之後還有聲音({db:.0f} dBFS ≥ -50)——"
             f"音樂要到最後一下就直接停(產生器要走 end_at_last_hit 閘門)")
+
+
+def test_click_alignment_golden():
+    """★拍點對齊 golden（2026-08-14 釘樁）：每個跟拍關卡、**每一拍**，
+    音檔裡的木魚 click 對 chart 拍點（leadInSec + beat×60/bpm）的
+    **匹配濾波**誤差 ≤15ms。程式擺位的真值＝0.0ms；門檻 15ms 是給
+    「素材音符搶相關峰」的偵測干擾留的（實測上限＝level21 第22拍 +10.9ms，
+    新舊檔一模一樣＝非真偏）。
+    ⚠️ 量對齊**不要**用能量包絡/帶通 onset——樂器透染會量出 50~120ms 假抖動
+    （2026-08-14 踩過，見 docs/踩過的坑.md 與 docs/關卡音樂_做法詳解.md）。"""
+    import glob
+    import shutil
+    import subprocess
+
+    import numpy as np
+    if not shutil.which("ffmpeg"):
+        print("（跳過對齊 golden：沒有 ffmpeg）")
+        return
+    try:
+        from scipy.signal import fftconvolve
+    except ImportError:
+        print("（跳過對齊 golden：沒有 scipy）")
+        return
+    sr = 44100
+    # 模板＝music_style 各章共用的木魚 click（1100Hz+0.3×2640Hz，attack 2ms、decay 30ms）
+    n_t = int(0.12 * sr)
+    tt = np.arange(n_t) / sr
+    atk, dcy = int(0.002 * sr), int(0.03 * sr)
+    env = np.ones(n_t)
+    env[:atk] = np.linspace(0, 1, atk)
+    env[atk:] = np.exp(-np.arange(n_t - atk) / dcy)
+    tpl = (np.sin(2 * np.pi * 1100 * tt) + 0.3 * np.sin(2 * np.pi * 2640 * tt)) * env
+    tpl -= tpl.mean()
+    for path in sorted(glob.glob(os.path.join(PROJ, "charts", "level*.json"))):
+        chart = json.load(open(path, encoding="utf-8"))
+        if "music" not in chart or "bpm" not in chart:
+            continue
+        name = os.path.basename(path)
+        spb = 60.0 / chart["bpm"]
+        times = [chart.get("leadInSec", 0) + n["beat"] * spb for n in chart["notes"]]
+        music = os.path.join(PROJ, chart["music"].lstrip("./"))
+        raw = subprocess.run(["ffmpeg", "-v", "quiet", "-i", music, "-ac", "1",
+                              "-ar", str(sr), "-f", "f32le", "-"],
+                             capture_output=True, check=True).stdout
+        y = np.frombuffer(raw, dtype="<f4").astype(float)
+        corr = np.abs(fftconvolve(y, tpl[::-1], mode="valid"))
+        hit = times[1] - times[0] if len(times) > 1 else 1.0
+        half = min(0.4 * hit, 0.06)
+        for i, t in enumerate(times):
+            lo, hi = int((t - half) * sr), int((t + half) * sr)
+            if lo < 0 or hi > len(corr):
+                continue
+            k = int(np.argmax(corr[lo:hi]))
+            err = abs((lo + k) / sr - t)
+            assert err <= 0.015, (
+                f"{name} 第{i + 1}拍：click 對 chart 偏 {err * 1000:.1f}ms(>15ms)——"
+                f"音樂跟譜面對不齊(檢查 leadInSec/pre/count_sec 與產生器 HIT/BAR)")
 
 
 def test_music_outlasts_last_note_window():
