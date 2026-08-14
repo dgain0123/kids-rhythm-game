@@ -121,12 +121,13 @@ def pick_rate(period, hit_sec):
     return best[1], best[2]
 
 
-def end_at_last_hit(seg, t_last, sr, hold=0.15, release=1.2):
-    """★音樂到最後一下就結束（2026-08-14 使用者裁示「後面不要再有音樂」）。
+def end_at_last_hit(seg, t_last, sr, hold=0.30, release=0.05):
+    """★音樂到最後一下就結束（2026-08-14 使用者裁示「後面不要再有音樂」；
+    同日再裁示**終止音直接停、不要長音衰減**→hold 0.3 秒後 0.05 秒去喀聲切掉）。
 
-    `t_last`＝最後一下相對 seg 起點的秒數。最後那顆音留 `hold` 秒完整聲頭，
-    接 `release` 秒餘弦淡出(自然衰減感)，之後**全零**——檔案其餘長度是靜音緩衝，
-    這樣容許窗照樣開滿(音樂物件放完才判失敗，守門⑥的檔長規則不變)。
+    `t_last`＝最後一下相對 seg 起點的秒數。最後那顆音留 `hold` 秒聲頭，
+    接 `release` 秒極短淡出(只為去喀聲)，之後**全零**——檔案其餘長度是靜音緩衝，
+    這樣容許窗照樣開滿(守門⑥的檔長規則不變)。
     守門：tests/test_music_style.py 的 test_music_ends_at_last_note。"""
     seg = seg.copy()
     i0 = int((t_last + hold) * sr)

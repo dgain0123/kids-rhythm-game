@@ -89,10 +89,10 @@ def test_audio_clock_sync_rules():
 
 def test_fail_settles_at_last_note_window():
     """**失敗也要停在最後一下**（2026-08-14 使用者裁示）：最後一顆的容許窗一關
-    (至少讓 1.35 秒終止音衰減完)就立刻 finishSong 結算，不乾等檔尾靜音；
+    (至少讓 0.35 秒的「直接停」終止音放完)就立刻 finishSong 結算，不乾等檔尾靜音；
     音檔 onended 只是備援。"""
     src = read("js", "main.js")
-    assert "Math.max(game.tolSec, 1.35)" in src, "endT 要至少涵蓋終止音衰減 1.35 秒"
+    assert "Math.max(game.tolSec, 0.5)" in src, "endT 要至少涵蓋 0.35 秒終止音+餘裕"
     assert re.search(r"t >= endT.*finishSong\(\)", src), "容許窗一關就要立刻結算(endT)"
 
 
