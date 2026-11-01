@@ -404,3 +404,10 @@ button:disabled { opacity: .6; cursor: default; }
   line-height: 1.6;
 }
 #credits a { color: #7b86b8; }
+
+/* 示範模式(?demo=1，錄示範影片用)：藏掉跟麥克風/操作有關的東西，畫面只留譜面＋軌道。
+   音樂出處(credits)要留著(CC BY 授權要求) */
+body.demo .meter,
+body.demo .sens-row,
+body.demo .mini-row,
+body.demo .stage-btns { display: none !important; }

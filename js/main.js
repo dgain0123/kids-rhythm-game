@@ -94,6 +94,9 @@ let rafId = null;     // 倒數/拍點高亮的 rAF 迴圈
 let _activeIdx = -1;  // 目前該打的音符索引(畫橘色高亮用)
 let laneSprite = { image: null, emoji: "🥁" }; // 太鼓軌道上跑的圖示(=目前角色)
 let laneFx = [];      // 最近打中的時間(譜面秒)，畫爆星特效用
+// 示範模式：?demo=1 不開麥克風、每顆音符到點自動打中(錄示範影片用，tools/record_demo.py)
+const DEMO = !!new URLSearchParams(location.search).get("demo");
+if (DEMO) document.body.classList.add("demo");
 
 // 太鼓軌道開/關：遊戲中用軌道取代靜態角色列，過關/失敗再把角色換回來
 function showLane(on) {
@@ -172,6 +175,13 @@ function startTimedLoop() {
     frame++;
     const ct = musicNow();
     const t = ct - lead;
+    // 示範模式(?demo=1，錄示範影片用)：每顆音符一到拍點就自動打中
+    if (DEMO) {
+      for (let i = 0; i < game.noteTimes.length; i++) {
+        if (!game.hitNotes[i] && t >= game.noteTimes[i]) game.registerHit(game.noteTimes[i]);
+      }
+      if (game.state === "pass") return;
+    }
     if (t >= endT) { game.finishSong(); return; }   // onState 會停音樂+播結果音
     if (lead > 0 && ct < lead) {
       if (ct < pre) {
@@ -359,7 +369,7 @@ function onState(state, info) {
       els.status.textContent = "過關！你好棒！";
       els.retry.hidden = false;
       els.next.hidden = !hasNextLevel(); // 有下一關才顯示「下一關」
-      (hasNextLevel() ? els.next : els.retry).scrollIntoView({ behavior: "smooth", block: "center" });
+      if (!DEMO) (hasNextLevel() ? els.next : els.retry).scrollIntoView({ behavior: "smooth", block: "center" });
       setTimeout(() => confetti(els.fxCanvas), 120); // 彩帶延後，避開最重的第一幀壓到聲音
       break;
     case "fail":
@@ -370,7 +380,7 @@ function onState(state, info) {
         : "哎呀～打太多下了！再試1次";
       stopListening();
       els.retry.hidden = false;
-      els.retry.scrollIntoView({ behavior: "smooth", block: "center" });
+      if (!DEMO) els.retry.scrollIntoView({ behavior: "smooth", block: "center" });
       break;
   }
 }
@@ -598,7 +608,7 @@ async function startGame() {
   els.start.textContent = "開麥克風中…";
   // 診斷用：?nomic=1 完全不開麥克風，只播音樂——用來分辨
   // 「音樂卡頓」是麥克風裝置拖累整個音訊管線、還是播放端本身的問題
-  const NOMIC = new URLSearchParams(location.search).get("nomic");
+  const NOMIC = new URLSearchParams(location.search).get("nomic") || DEMO;
   try {
     unlockAudio(); // 趁「開始遊戲」手勢解鎖 Web Audio
     primeCheer();  // 同一手勢解鎖真人歡呼的 <audio> 元素，過關才播得出
