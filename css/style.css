@@ -411,3 +411,11 @@ body.demo .meter,
 body.demo .sens-row,
 body.demo .mini-row,
 body.demo .stage-btns { display: none !important; }
+
+/* 數下數關卡：打一下就有一隻動物「噗」地縮小消失，位置留著(其他動物不跳位) */
+.char-item.gone { animation: charPoof .35s ease-in forwards; pointer-events: none; }
+@keyframes charPoof {
+  0%   { transform: scale(1);   opacity: 1; }
+  40%  { transform: scale(1.2); opacity: 1; }
+  100% { transform: scale(0);   opacity: 0; visibility: hidden; }
+}

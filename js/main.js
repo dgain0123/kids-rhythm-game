@@ -2,7 +2,7 @@
 import { DrumListener } from "./audio.js";
 import { Game } from "./game.js";
 import { drawNotes, drawLane, confetti, needsScroll } from "./render.js";
-import { initCharacters, showCharacter, setCharCount, getCurrentChar } from "./characters.js";
+import { initCharacters, showCharacter, setCharCount, getCurrentChar, hideCharacters } from "./characters.js";
 
 // 大關卡(章節)：把小關卡收在一起。之後加新章節就在這裡加一組
 // {title: 章節名, levels: [小關卡...]}；「下一關」只在同章節內接續
@@ -94,7 +94,7 @@ let rafId = null;     // 倒數/拍點高亮的 rAF 迴圈
 let _activeIdx = -1;  // 目前該打的音符索引(畫橘色高亮用)
 let laneSprite = { image: null, emoji: "🥁" }; // 太鼓軌道上跑的圖示(=目前角色)
 let laneFx = [];      // 最近打中的時間(譜面秒)，畫爆星特效用
-// 示範模式：?demo=1 不開麥克風、每顆音符到點自動打中(錄示範影片用，tools/record_demo.py)
+// 示範模式：?demo=1 不開麥克風、自動打(跟拍關＝音符到點打中；數下數關＝每秒一下)，錄示範影片用
 const DEMO = !!new URLSearchParams(location.search).get("demo");
 if (DEMO) document.body.classList.add("demo");
 
@@ -355,10 +355,10 @@ function onState(state, info) {
         : `準備好了！打${info.maxHits}下鼓～`;
       break;
     case "progress":
-      els.status.textContent = "";
-      break;
     case "hitOnce":
       els.status.textContent = "";
+      // 數下數關卡：每打一下就有一隻動物消失(2026-11-01 使用者要求)
+      if (!info.timed) hideCharacters(info.hits);
       break;
     case "pass":
       stopMusic();
@@ -374,6 +374,7 @@ function onState(state, info) {
       break;
     case "fail":
       stopMusic();
+      if (!info.timed) showCharacter(); // 打太多下：消失的動物全部回來(不然失敗畫面空空的)
       failSound();
       els.status.textContent = info.timed
         ? "有音符沒打到～再試1次！"
@@ -708,6 +709,16 @@ async function startGame() {
     musicSrc.start(musicT0);
     els.status.textContent = "預備～聽拍子！";
     startTimedLoop();
+  } else if (DEMO && !game.timed) {
+    // 示範模式的數下數關卡：開始後每 1 秒自動打一下，打滿為止
+    const t0 = performance.now();
+    const g = game;
+    const loop = () => {
+      if (game !== g || g.hits >= g.maxHits) return;
+      if (performance.now() - t0 >= (g.hits + 1) * 1000) g.registerHit();
+      requestAnimationFrame(loop);
+    };
+    requestAnimationFrame(loop);
   }
 }
 

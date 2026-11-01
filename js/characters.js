@@ -58,6 +58,13 @@ function renderPicker(onChange) {
   }
 }
 
+// 數下數關卡：打了幾下就讓幾隻動物消失(從第1號開始依序)。
+// 用 visibility 隱藏、位置留著，剩下的動物不會跳位置；showCharacter() 會全部畫回來
+export function hideCharacters(n) {
+  [...els.face.querySelectorAll(".char-item")].forEach((el, i) =>
+    el.classList.toggle("gone", i < n));
+}
+
 // 重新把目前選的角色畫回角色框(過關顯示拉炮後要還原時用)
 export function showCharacter() { renderCurrent(); }
 
