@@ -95,8 +95,12 @@ let _activeIdx = -1;  // 目前該打的音符索引(畫橘色高亮用)
 let laneSprite = { image: null, emoji: "🥁" }; // 太鼓軌道上跑的圖示(=目前角色)
 let laneFx = [];      // 最近打中的時間(譜面秒)，畫爆星特效用
 // 示範模式：?demo=1 不開麥克風、自動打(跟拍關＝音符到點打中；數下數關＝每秒一下)，錄示範影片用
-const DEMO = !!new URLSearchParams(location.search).get("demo");
+// demo=1 正常示範；demo=miss 跟拍關故意漏打最後一顆(驗失敗路線)；demo=over 打幾下關多打一下(驗失敗路線)
+// 規則正解檔：docs/示範模式與動物消失.md
+const DEMO = new URLSearchParams(location.search).get("demo") || "";
 if (DEMO) document.body.classList.add("demo");
+// 示範模式才開放唯讀狀態給檢查器(tools/demo_rules.py)讀：目前的 game、關卡是否載好
+if (DEMO) window.__demo = { get game() { return game; }, get chart() { return chart; }, ready: false };
 
 // 太鼓軌道開/關：遊戲中用軌道取代靜態角色列，過關/失敗再把角色換回來
 function showLane(on) {
@@ -177,7 +181,8 @@ function startTimedLoop() {
     const t = ct - lead;
     // 示範模式(?demo=1，錄示範影片用)：每顆音符一到拍點就自動打中
     if (DEMO) {
-      for (let i = 0; i < game.noteTimes.length; i++) {
+      const n = game.noteTimes.length - (DEMO === "miss" ? 1 : 0); // miss：最後一顆不打
+      for (let i = 0; i < n; i++) {
         if (!game.hitNotes[i] && t >= game.noteTimes[i]) game.registerHit(game.noteTimes[i]);
       }
       if (game.state === "pass") return;
@@ -235,6 +240,7 @@ async function loadChart(level) {
 // 切到第 idx 關：載譜、更新標題/提示/譜面(有音樂就先整包載進記憶體)
 async function goToLevel(idx) {
   stopMusic();
+  if (DEMO) window.__demo.ready = false;
   levelIdx = Math.max(0, Math.min(LEVELS.length - 1, idx));
   chart = await loadChart(LEVELS[levelIdx]);
   $("title").textContent = chart.title;
@@ -254,6 +260,7 @@ async function goToLevel(idx) {
       musicBuf = await getCtx().decodeAudioData(await res.arrayBuffer());
     } catch (e) { musicBuf = null; }
   }
+  if (DEMO) window.__demo.ready = true; // 檢查器等這個才按開始(不靠固定等待時間)
 }
 
 // 「下一關」只在同一個大關卡內接續(章節結尾就沒有下一關)
@@ -710,11 +717,12 @@ async function startGame() {
     els.status.textContent = "預備～聽拍子！";
     startTimedLoop();
   } else if (DEMO && !game.timed) {
-    // 示範模式的數下數關卡：開始後每 1 秒自動打一下，打滿為止
+    // 示範模式的數下數關卡：開始後每 1 秒自動打一下，打滿為止(over：多打一下→失敗)
     const t0 = performance.now();
     const g = game;
+    const total = g.maxHits + (DEMO === "over" ? 1 : 0);
     const loop = () => {
-      if (game !== g || g.hits >= g.maxHits) return;
+      if (game !== g || g.hits >= total || g.state === "fail") return;
       if (performance.now() - t0 >= (g.hits + 1) * 1000) g.registerHit();
       requestAnimationFrame(loop);
     };

@@ -21,52 +21,16 @@ import shutil
 import subprocess
 import sys
 import tempfile
-import threading
-import http.server
-import functools
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 FPS = 30
 SUB = 2            # 每格推兩次 1/60 秒(遊戲的軌道/捲動是「每兩幀畫一次」，彩帶物理以 60fps 為單位)
-MUSIC_T0 = 0.08    # main.js：musicT0 = 點開始時的 currentTime + 0.08
 TAIL_SEC = 5.6     # 過關後再錄多久(彩帶 5 秒＋一點收尾)
 
-# 虛擬時鐘：在頁面任何程式執行前注入
-INIT_JS = r"""
-(() => {
-  let vt = 0;                       // 虛擬秒數
-  const cbs = new Map(); let nid = 1;
-  const desc = (get) => ({ get, configurable: true });
-  Object.defineProperty(AudioContext.prototype, 'currentTime', desc(() => vt));
-  Object.defineProperty(AudioContext.prototype, 'outputLatency', desc(() => 0));
-  Object.defineProperty(BaseAudioContext.prototype, 'currentTime', desc(() => vt));
-  Object.defineProperty(AudioContext.prototype, 'baseLatency', desc(() => 0));
-  performance.now = () => vt * 1000;
-  // 瀏覽器裡不真的播音樂：截圖比實際時間慢，真的播會先放完、觸發「音樂放完＝結算失敗」
-  AudioBufferSourceNode.prototype.start = function () {};
-  window.requestAnimationFrame = (cb) => { const id = nid++; cbs.set(id, cb); return id; };
-  window.cancelAnimationFrame = (id) => { cbs.delete(id); };
-  window.__vtStep = (dt) => {
-    vt += dt;
-    const list = [...cbs.values()]; cbs.clear();
-    for (const cb of list) { try { cb(vt * 1000); } catch (e) { console.error(e); } }
-  };
-  window.__vtNow = () => vt;
-})();
-"""
-
-
-class _Quiet(http.server.SimpleHTTPRequestHandler):
-    def log_message(self, *a):
-        pass
-
-
-def serve(root: Path):
-    handler = functools.partial(_Quiet, directory=str(root))
-    srv = http.server.ThreadingHTTPServer(("127.0.0.1", 0), handler)
-    threading.Thread(target=srv.serve_forever, daemon=True).start()
-    return srv
+# 虛擬時鐘、本機伺服器、成品檢查都在 demo_rules.py(唯一一份)
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from demo_rules import INIT_JS, MUSIC_T0, serve, check_video  # noqa: E402
 
 
 def main():
@@ -109,7 +73,9 @@ def main():
             page.route("**/*.m4a", lambda r: r.fulfill(path=str(wav), content_type="audio/wav"))
             page.goto(f"http://127.0.0.1:{port}/index.html?level={args.level}&demo=1")
             page.wait_for_selector("#startBtn:not([hidden])")
-            page.wait_for_timeout(2000)      # 等音樂解碼完(沒解完就按開始會變成不跟拍)
+            # 等關卡＋音樂載好、圖片載完才按開始(沒解完就按會變成不跟拍)
+            page.wait_for_function("window.__demo && window.__demo.ready"
+                                   " && [...document.images].every(im => im.complete)", polling=50)
             page.click("#startBtn")
             page.wait_for_timeout(300)
             if page.evaluate("document.getElementById('laneCanvas').hidden"):
@@ -157,7 +123,10 @@ def main():
         "-c:a", "aac", "-b:a", "192k", "-t", f"{dur:.3f}", "-movflags", "+faststart", str(out),
     ], check=True)
     shutil.rmtree(work, ignore_errors=True)
-    print("完成：", out)
+    bad = check_video(out, chart, pass_at, round(args.width * args.scale), round(args.height * args.scale), FPS)
+    if bad:
+        sys.exit("影片沒通過規則檢查：\n  " + "\n  ".join(bad))
+    print("完成(規則檢查通過)：", out)
 
 
 if __name__ == "__main__":
