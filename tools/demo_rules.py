@@ -127,9 +127,10 @@ def serve(root: Path):
     return srv
 
 
-def silent_wav():
-    """無頭瀏覽器解不了 m4a；檢查只需要遊戲「拿到音訊」，給一段 0.5 秒靜音 wav 就好。"""
-    p = Path(tempfile.mkdtemp()) / "silent.wav"
+def silent_wav(folder):
+    """無頭瀏覽器解不了 m4a；檢查只需要遊戲「拿到音訊」，給一段 0.5 秒靜音 wav 就好。
+    folder 由呼叫端給(用完就刪的暫存夾)，不要自己 mkdtemp——每跑一次守門會留 4 個垃圾夾。"""
+    p = Path(folder) / "silent.wav"
     with wave.open(str(p), "wb") as w:
         w.setnchannels(1); w.setsampwidth(2); w.setframerate(22050)
         w.writeframes(struct.pack("<h", 0) * 11025)
@@ -164,11 +165,11 @@ def _run_one(page, port, level, mode):
 def run_traces(jobs):
     """jobs = [(level, mode), ...]，mode：跟拍關 '1'/'miss'、數下數關 '1'/'over'。"""
     from playwright.sync_api import sync_playwright
-    wav = silent_wav()
     srv = serve(ROOT)
     out = []
     try:
-        with sync_playwright() as p:
+        with tempfile.TemporaryDirectory() as tmp, sync_playwright() as p:
+            wav = silent_wav(tmp)
             br = p.chromium.launch()
             ctx = br.new_context(viewport={"width": 1280, "height": 720}, service_workers="block")
             ctx.add_init_script(INIT_JS)
@@ -187,8 +188,9 @@ def run_traces(jobs):
     return out
 
 
-def run_traces_parallel(jobs, workers=4):
-    """分給幾個瀏覽器同時跑(守門用，80 條路從約 50 秒降到十幾秒)；回傳順序同 jobs。"""
+def run_traces_parallel(jobs, workers=6):
+    """分給幾個瀏覽器同時跑(守門用，80 條路從約 50 秒降到十幾秒)；回傳順序同 jobs。
+    workers=6：2026-11-15 實測 4/6/8 個＝17/14/14 秒，6 之後不再變快。"""
     from concurrent.futures import ProcessPoolExecutor
     chunks = [jobs[i::workers] for i in range(workers)]
     with ProcessPoolExecutor(workers) as ex:

@@ -131,17 +131,42 @@ def test_normalize_loudness_hits_target():
     assert np.max(np.abs(mx.buf)) <= music_style.LIMIT_CEILING + 1e-6, "峰值超過限幅天花板"
 
 
+_PCM = {}
+
+
+def _decode(path, sr=44100):
+    """ffmpeg 解碼成單聲道 float（原生 44100）。**同一個檔整輪守門只解碼一次**：
+    音量／收尾／對齊三個測試都要同一份 PCM，各解一次＝90 次 ffmpeg，共用後剩 30 次。
+    第一次用到時把所有關卡音樂一口氣平行解完（ffmpeg 是外部行程，執行緒就能平行）。"""
+    import glob
+    import subprocess
+    from concurrent.futures import ThreadPoolExecutor
+
+    import numpy as np
+
+    def one(p):
+        raw = subprocess.run(["ffmpeg", "-v", "quiet", "-i", p, "-ac", "1",
+                              "-ar", str(sr), "-f", "f32le", "-"],
+                             capture_output=True, check=True).stdout
+        return np.frombuffer(raw, dtype="<f4").astype(float)
+
+    path = os.path.abspath(path)
+    if not _PCM and sr == 44100:
+        files = sorted(glob.glob(os.path.join(PROJ, "sounds", "music", "level*.m4a")))
+        with ThreadPoolExecutor(6) as ex:
+            for f, y in zip(files, ex.map(one, files)):
+                _PCM[(os.path.abspath(f), sr)] = y
+    if (path, sr) not in _PCM:
+        _PCM[(path, sr)] = one(path)
+    return _PCM[(path, sr)]
+
+
 def _rms_peak(path, sr=44100, skip_head=3.0, skip_tail=2.0):
     """用 ffmpeg 快速解碼量 RMS 與峰值（比 librosa 快很多，適合守門）。
     ⚠️ **一定要用原生取樣率 44100 量峰值**：降取樣(8k/22k)的濾波器本身會過衝，
     量出來會假破表(實測 level14 原生 0.977、降到 8k 變 1.097)。"""
-    import subprocess
-
     import numpy as np
-    out = subprocess.run(["ffmpeg", "-v", "quiet", "-i", path, "-ac", "1",
-                          "-ar", str(sr), "-f", "f32le", "-"],
-                         capture_output=True, check=True).stdout
-    y = np.frombuffer(out, dtype="<f4").astype(float)
+    y = _decode(path, sr)
     core = y[int(skip_head * sr): len(y) - int(skip_tail * sr)]
     if len(core) < sr:
         core = y
@@ -358,10 +383,7 @@ def test_music_ends_at_last_note():
         spb = 60.0 / chart["bpm"]
         last = chart.get("leadInSec", 0) + chart["notes"][-1]["beat"] * spb
         music = os.path.join(PROJ, chart["music"].lstrip("./"))
-        raw = subprocess.run(["ffmpeg", "-v", "quiet", "-i", music, "-ac", "1",
-                              "-ar", str(sr), "-f", "f32le", "-"],
-                             capture_output=True, check=True).stdout
-        y = np.frombuffer(raw, dtype="<f4").astype(float)
+        y = _decode(music, sr)
         seg = y[int((last + 0.25) * sr):]
         if len(seg) < sr // 5:
             continue
@@ -413,18 +435,17 @@ def test_click_alignment_golden():
         spb = 60.0 / chart["bpm"]
         times = [chart.get("leadInSec", 0) + n["beat"] * spb for n in chart["notes"]]
         music = os.path.join(PROJ, chart["music"].lstrip("./"))
-        raw = subprocess.run(["ffmpeg", "-v", "quiet", "-i", music, "-ac", "1",
-                              "-ar", str(sr), "-f", "f32le", "-"],
-                             capture_output=True, check=True).stdout
-        y = np.frombuffer(raw, dtype="<f4").astype(float)
-        corr = np.abs(fftconvolve(y, tpl[::-1], mode="valid"))
+        y = _decode(music, sr)
+        n_corr = len(y) - n_t + 1                 # 整首做匹配濾波會有幾點(＝原本 corr 的長度)
         hit = times[1] - times[0] if len(times) > 1 else 1.0
         half = min(0.4 * hit, 0.06)
         for i, t in enumerate(times):
             lo, hi = int((t - half) * sr), int((t + half) * sr)
-            if lo < 0 or hi > len(corr):
+            if lo < 0 or hi > n_corr:
                 continue
-            k = int(np.argmax(corr[lo:hi]))
+            # 只算拍點前後這一小窗的匹配濾波（＝整首 corr[lo:hi]，數值相同、不用整首算）
+            win = np.abs(fftconvolve(y[lo:hi + n_t - 1], tpl[::-1], mode="valid"))
+            k = int(np.argmax(win))
             err = abs((lo + k) / sr - t)
             assert err <= 0.015, (
                 f"{name} 第{i + 1}拍：click 對 chart 偏 {err * 1000:.1f}ms(>15ms)——"
@@ -444,19 +465,27 @@ def test_music_outlasts_last_note_window():
     if not shutil.which("ffprobe"):
         print("（跳過音樂長度檢查：沒有 ffprobe）")
         return
+    from concurrent.futures import ThreadPoolExecutor
     margin = 0.5                                  # 再留半秒給收尾淡出
+
+    def probe(music):
+        return float(subprocess.run(
+            ["ffprobe", "-v", "quiet", "-show_entries", "format=duration",
+             "-of", "csv=p=0", music], capture_output=True, text=True, check=True).stdout)
+
+    todo = []
     for path in sorted(glob.glob(os.path.join(PROJ, "charts", "level*.json"))):
         chart = json.load(open(path, encoding="utf-8"))
         if "music" not in chart or "bpm" not in chart:
             continue                              # 數下數關卡不判拍子
-        name = os.path.basename(path)
+        todo.append((os.path.basename(path), chart,
+                     os.path.join(PROJ, chart["music"].lstrip("./"))))
+    with ThreadPoolExecutor(6) as ex:             # ffprobe 是外部行程，30 個一起問
+        durs = list(ex.map(probe, [m for _, _, m in todo]))
+    for (name, chart, music), dur in zip(todo, durs):
         spb = 60.0 / chart["bpm"]
         last = chart.get("leadInSec", 0) + chart["notes"][-1]["beat"] * spb
         tol = chart.get("toleranceBeats", 0.5) * spb
-        music = os.path.join(PROJ, chart["music"].lstrip("./"))
-        dur = float(subprocess.run(
-            ["ffprobe", "-v", "quiet", "-show_entries", "format=duration",
-             "-of", "csv=p=0", music], capture_output=True, text=True, check=True).stdout)
         assert dur >= last + tol + margin, (
             f"{name} 的音樂只有 {dur:.2f} 秒，最後一下在 {last:.2f} 秒、容許 ±{tol:.2f} 秒"
             f"——音樂放完容許窗還沒關，會誤判失敗（產生器的 tail 要加長）")

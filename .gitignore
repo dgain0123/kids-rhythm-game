@@ -2,3 +2,4 @@
 __pycache__/
 tools/soundfonts/*.sf2
 videos/
+tests/.guard_cache.json

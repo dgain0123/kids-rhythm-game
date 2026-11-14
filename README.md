@@ -28,25 +28,17 @@
 **方法 B（手動）**：
 ```bash
 cd ~/Downloads/Claude/幼兒節奏遊戲
-python3 -m http.server 8770
+python3 serve.py
 # 瀏覽器開 http://localhost:8770
 ```
+（用 `serve.py` 不要用 `python3 -m http.server`：前者禁快取＋IPv4/IPv6 雙棧，Safari 才不會轉圈或看到舊檔。）
 第一次會問麥克風權限，請按「允許」。用滑桿調整靈敏度（真的鼓比較大聲、可調低靈敏；用手拍桌可調高）。
 
 ## 關卡規格
 每一關都有獨立的規格正解檔，放在 `關卡/`（例：`關卡/第1關.md`）。要改某關規則先改它的 md，程式/資料以該檔為準。**每個 md 保持在 200 行以內**。
 
 ## 專案結構
-```
-index.html          遊戲畫面
-css/style.css        幼兒風格樣式
-js/audio.js          麥克風 + 打鼓聲偵測(onset detection)
-js/game.js           關卡邏輯(打一下過關 / 打兩下失敗)
-js/render.js         畫譜面音符 + 過關彩帶
-js/main.js           串接以上
-charts/level1.json   第一關的「譜」
-start.command        一鍵啟動
-```
+見 [架構總覽](docs/架構總覽.md)（唯一一份，這裡不重複）。給 Claude 的路由檔是 `CLAUDE.md`。
 
 ## 譜的格式 & 轉檔
 譜的來源是 **Logic Pro**。流程：
@@ -91,19 +83,14 @@ python3 tools/retempo_midi.py --src midi/第23關.mid --bpm 50 -o midi/第24關.
 畫面上方有**角色選單**，點一下就換，選擇會記住。**一份網頁、多個角色**，不用複製整個網站。
 
 **加一個新角色（約 30 秒）：**
-1. 把圖片放進 `characters/` 資料夾（建議**透明背景 PNG、正方形**，例如 `characters/pikachu.png`）
+1. 把圖片放進 `characters/` 資料夾（建議**透明背景 PNG、正方形**，例如 `characters/dog.png`；**repo 是公開的，只能放自己畫的或無版權的圖**）
 2. 打開 `characters/index.json`，在 `characters` 陣列加一筆：
    ```json
-   { "id": "pikachu", "name": "皮卡丘", "img": "pikachu.png" }
+   { "id": "dog", "name": "小狗", "img": "dog.png" }
    ```
    （想用 emoji 當角色就寫 `"emoji": "🐱"`、不用放圖）
 3. 重整網頁 → 選單就多一個
 
 - 過關時角色會自己蹦蹦跳（`css/style.css` 的 `@keyframes celebrate`）
-- 也能用網址指定預設角色：`index.html?char=pikachu`
+- 也能用網址指定預設角色：`index.html?char=dog`
 - 角色系統程式在 `js/characters.js`
-
-## 之後可以加
-- mid→json 轉檔器（對接 Logic / 鼓譜自動化專案）
-- 更多關卡（打兩下、跟拍子、多種鼓件）
-- 更華麗的角色動畫（可找 UI / Whimsy agent 加料）
