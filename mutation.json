@@ -1,0 +1,8 @@
+{
+  "說明": "改壞測試設定。引擎與說明在 ~/.claude/tools/mutation/ 與 ~/.claude/改壞測試.md。只改 Python（tools/ 與 serve.py）；遊戲本體 js/、index.html 目前不在範圍。test_demo_rules.py 會開無頭瀏覽器跑 40 關，改壞測試不拿它驗。",
+  "runner": "functions",
+  "targets": ["*.py", "tools/*.py"],
+  "exclude_tests": ["test_demo_rules.py"],
+  "baseline_timeout": 600,
+  "jobs": 2
+}
