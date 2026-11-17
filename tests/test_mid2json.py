@@ -220,8 +220,8 @@ def test_same_content_levels_share_grid():
         assert os.path.exists(path), f"缺 charts/level{lv}.json（同內容關卡表裡有它）"
         chart = json.load(open(path, encoding="utf-8"))
         notes = [(n["type"], n["drum"], n["beat"]) for n in chart["notes"]]
-        assert chart["toleranceBeats"] == 0.3333, (
-            f"level{lv} 的容許值不是 1/3 拍（使用者 2026-08-04 指定這幾關全部 1/3 拍）")
+        assert chart["toleranceBeats"] == 1, (
+            f"level{lv} 的容許值不是 1 拍（使用者 2026-11-17 改定：每一關誤差全改成一拍）")
         if base_notes is None:
             base_notes, base_lv = notes, lv
             continue
@@ -248,6 +248,23 @@ def test_midi_tempo_matches_chart_bpm():
         assert abs(bpm - chart["bpm"]) < 0.01, (
             f"midi/第{lv}關.mid 的 tempo {bpm:g} ≠ charts/level{lv}.json 的 bpm "
             f"{chart['bpm']:g}——譜沒有跟著 MIDI 重轉")
+
+
+def test_all_timed_levels_tolerance_one_beat():
+    """**每一關跟拍關卡的容許誤差＝一拍**（使用者 2026-11-17：「每一關的誤差值全改成一拍」）。
+    新增關卡用 mid2json 要帶 `--tolerance 1`；漏帶或帶別的值這條會紅。"""
+    import glob
+    import json
+    proj = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    timed = 0
+    for path in sorted(glob.glob(os.path.join(proj, "charts", "level*.json"))):
+        chart = json.load(open(path, encoding="utf-8"))
+        if "bpm" not in chart:
+            continue                      # 數下數關卡不判拍子、沒有容許值
+        timed += 1
+        assert chart.get("toleranceBeats") == 1, (
+            f"{os.path.basename(path)} 的容許誤差是 {chart.get('toleranceBeats')} 拍，不是一拍")
+    assert timed >= 30, f"跟拍關卡只找到 {timed} 關"
 
 
 if __name__ == "__main__":

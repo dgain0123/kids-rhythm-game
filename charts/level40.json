@@ -330,7 +330,7 @@
     }
   ],
   "hint": "最快挑戰！四個一組，最後一下長音～",
-  "toleranceBeats": 0.25,
+  "toleranceBeats": 1,
   "music": "./sounds/music/level40.m4a",
   "leadInSec": 3.4,
   "metronome": "sixteenth",

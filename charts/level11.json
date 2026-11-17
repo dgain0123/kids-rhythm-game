@@ -130,7 +130,7 @@
     }
   ],
   "hint": "更快囉！跟著拍子打鼓！",
-  "toleranceBeats": 0.5,
+  "toleranceBeats": 1,
   "music": "./sounds/music/level11.m4a",
   "leadInSec": 5.0,
   "metronome": "eighth",

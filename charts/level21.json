@@ -130,7 +130,7 @@
     }
   ],
   "hint": "快一倍囉！三個一組，最後一下長音～",
-  "toleranceBeats": 0.3333,
+  "toleranceBeats": 1,
   "music": "./sounds/music/level21.m4a",
   "leadInSec": 5.0,
   "metronome": "triplet",

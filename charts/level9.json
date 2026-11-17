@@ -50,7 +50,7 @@
     }
   ],
   "hint": "聽音樂，跟著拍子打鼓！",
-  "toleranceBeats": 0.5,
+  "toleranceBeats": 1,
   "music": "./sounds/music/level9.m4a",
   "leadInSec": 13.0,
   "metronome": "eighth",

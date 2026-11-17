@@ -330,7 +330,7 @@
     }
   ],
   "hint": "更快了！四個一組，最後一下長音～",
-  "toleranceBeats": 0.25,
+  "toleranceBeats": 1,
   "music": "./sounds/music/level35.m4a",
   "leadInSec": 2.2,
   "metronome": "sixteenth",

@@ -57,7 +57,7 @@ PROG = [
     {"pad": ["C4", "E4", "G4"], "bass": "C2", "bell": "C6", "arp": []},  # 終止小節：琶音清空(音樂到最後一下就結束，2026-08-14)
 ]
 BARS = len(PROG)
-TOTAL = LEAD_IN + BARS * BAR + 1.0
+TOTAL = LEAD_IN + BARS * BAR + 4.0  # 檔尾靜音要蓋過容許窗(2026-11-17 誤差改一拍=±6秒)
 
 buf = np.zeros(int(TOTAL * SR))
 

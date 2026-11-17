@@ -184,7 +184,23 @@ def _loud_segment(x, sr, frame=0.4):
     n = max(1, int(frame * sr))
     frames = [np.sqrt(np.mean(x[i:i + n] ** 2)) for i in range(0, max(1, len(x) - n), n)]
     frames = np.array(frames) if frames else np.array([np.sqrt(np.mean(x ** 2))])
+    # 靜音格(<-60dBFS)不算：檔尾靜音緩衝加長(2026-11-17 誤差改一拍、BPM10 三關檔尾+2~3 秒)
+    # 不該讓「音符多響」變小聲；不排除的話多一段靜音就會被量低 0.2dB。
+    sounding = frames[frames > 1e-3]
+    if len(sounding):
+        frames = sounding
     return float(np.mean(np.sort(frames)[-max(1, len(frames) // 4):]))
+
+
+def test_loud_segment_ignores_trailing_silence():
+    """響段響度不受檔尾靜音長短影響（檔尾是容許窗的緩衝，不是音樂）。"""
+    import numpy as np
+    sr = 8000
+    t = np.arange(sr * 4) / sr
+    tone = 0.3 * np.sin(2 * np.pi * 440 * t) * (np.sin(2 * np.pi * 0.5 * t) > 0)
+    a = _loud_segment(tone, sr)
+    b = _loud_segment(np.concatenate([tone, np.zeros(sr * 6)]), sr)
+    assert abs(20 * np.log10(a / b)) < 0.05, (a, b)
 
 
 def test_all_level_music_loudness():

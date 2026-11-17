@@ -250,7 +250,7 @@
     }
   ],
   "hint": "三個一組，跟著音樂打鼓！",
-  "toleranceBeats": 0.3333,
+  "toleranceBeats": 1,
   "music": "./sounds/music/level26.m4a",
   "leadInSec": 4.428571,
   "metronome": "triplet",

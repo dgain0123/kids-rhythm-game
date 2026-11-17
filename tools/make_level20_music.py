@@ -34,7 +34,7 @@ BAR = 3 * HIT       # 素材一小節 6 秒 = 30BPM 3/4；一下＝一拍(見 tr
 PRE = 1.0           # 開頭靜音緩衝(= chart 的 preRollSec)
 LEAD_HITS = 4       # 預備拍 4 聲(間隔＝拍點間隔，速度50以下的規矩)
 N_HITS = 13         # 這關要打 13 下(12 個三連音 + 第2小節開頭 1 個四分音符收尾)
-TAIL = 4.0
+TAIL = 6.0  # 檔尾要蓋過容許窗(2026-11-17 誤差改一拍)
 
 STYLE = style_for_chapter(CHAPTER)
 LEAD_IN = PRE + LEAD_HITS * HIT      # 9 秒(= chart 的 leadInSec)

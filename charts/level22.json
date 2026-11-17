@@ -190,7 +190,7 @@
     }
   ],
   "hint": "又更快囉！三個一組，最後一下長音～",
-  "toleranceBeats": 0.3333,
+  "toleranceBeats": 1,
   "music": "./sounds/music/level22.m4a",
   "leadInSec": 3.6667,
   "metronome": "triplet",

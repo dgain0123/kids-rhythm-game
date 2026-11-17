@@ -70,7 +70,7 @@
     }
   ],
   "hint": "跟著音樂打鼓！三個一組，最後一下長音～",
-  "toleranceBeats": 0.3333,
+  "toleranceBeats": 1,
   "music": "./sounds/music/level20.m4a",
   "leadInSec": 9.0,
   "metronome": "triplet",

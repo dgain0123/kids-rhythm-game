@@ -27,7 +27,7 @@ PRE = 1.0
 LEAD_HITS = 4       # 預備拍 4 聲
 COUNT = HIT  # 人聲間隔：拍點間隔(速度50以下規矩)
 N_HITS = 17
-TAIL = 4.0
+TAIL = 6.0  # 檔尾要蓋過容許窗(2026-11-17 誤差改一拍)
 
 STYLE = style_for_chapter(CHAPTER)
 LEAD_IN = PRE + LEAD_HITS * COUNT    # 7 秒(= chart 的 leadInSec)

@@ -250,7 +250,7 @@
     }
   ],
   "hint": "再快一點！三個一組，最後一下長音～",
-  "toleranceBeats": 0.3333,
+  "toleranceBeats": 1,
   "music": "./sounds/music/level23.m4a",
   "leadInSec": 3.0,
   "metronome": "triplet",

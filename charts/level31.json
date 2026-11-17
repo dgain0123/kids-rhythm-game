@@ -90,7 +90,7 @@
     }
   ],
   "hint": "跟著音樂：四個一組，最後一下長音～",
-  "toleranceBeats": 0.25,
+  "toleranceBeats": 1,
   "music": "./sounds/music/level31.m4a",
   "leadInSec": 7.0,
   "metronome": "sixteenth",

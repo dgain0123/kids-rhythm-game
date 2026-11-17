@@ -330,7 +330,7 @@
     }
   ],
   "hint": "好快呀！四個一組，最後一下長音～",
-  "toleranceBeats": 0.25,
+  "toleranceBeats": 1,
   "music": "./sounds/music/level37.m4a",
   "leadInSec": 4.428571,
   "metronome": "sixteenth",
