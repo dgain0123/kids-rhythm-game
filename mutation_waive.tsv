@@ -1,0 +1,3 @@
+tools/make_level20_music.py	cb31b91452c071df	檔尾再加長只多一段靜音、不影響判定；縮短會被 test_music_style 的音樂長度≥容許窗檢查擋
+tools/make_level31_music.py	cb31b91452c071df	同第20關：檔尾加長無害；縮短由音樂長度≥容許窗檢查擋
+tools/make_level9_music.py	68a1f6ab2709526c	檔尾 +4→+5 只多一秒靜音、無害；縮短由 test_level9_generator_total_covers_tolerance 擋

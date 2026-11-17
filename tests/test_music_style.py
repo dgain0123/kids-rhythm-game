@@ -507,6 +507,24 @@ def test_music_outlasts_last_note_window():
             f"——音樂放完容許窗還沒關，會誤判失敗（產生器的 tail 要加長）")
 
 
+def test_level9_generator_total_covers_tolerance():
+    """第9關產生器排的總長（TOTAL）要蓋過最後一顆的容許窗＋0.5 秒——
+    不用等重做音樂才發現（2026-11-17 誤差改一拍＝±6 秒，檔尾從 +1 改 +4 秒）。"""
+    import importlib.util
+    import json
+    sys.path.insert(0, os.path.join(PROJ, "tools"))
+    spec = importlib.util.spec_from_file_location(
+        "make_level9_music", os.path.join(PROJ, "tools", "make_level9_music.py"))
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    chart = json.load(open(os.path.join(PROJ, "charts", "level9.json"), encoding="utf-8"))
+    spb = 60.0 / chart["bpm"]
+    last = chart["leadInSec"] + chart["notes"][-1]["beat"] * spb
+    need = last + chart["toleranceBeats"] * spb + 0.5
+    assert mod.TOTAL >= need, f"第9關音樂只排 {mod.TOTAL} 秒，容許窗要到 {need} 秒"
+    assert mod.TOTAL <= need + 2.0, f"第9關音樂排 {mod.TOTAL} 秒，比需要的 {need} 秒長太多"
+
+
 if __name__ == "__main__":
     for fn_name, fn in sorted(globals().items()):
         if fn_name.startswith("test_") and callable(fn):
